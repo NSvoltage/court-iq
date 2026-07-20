@@ -51,6 +51,17 @@ test('patterns are produced', () => {
   assert.ok(Array.isArray(M.patterns2.top_openings));
 });
 
+test('targeting: placement distribution + segments', () => {
+  const tg = M.targeting.you;
+  assert.ok(tg.n > 100, 'has groundstrokes');
+  const s = tg.lateral.left_pct + tg.lateral.middle_pct + tg.lateral.right_pct;
+  assert.ok(s >= 98 && s <= 102, 'lateral split sums to ~100');
+  assert.equal(tg.grid.length, 3);
+  assert.equal(tg.segments.length, 3);
+  assert.equal(M.targeting.segment_labels.length, 3);
+  assert.ok(M.targeting.segment_labels[2].to >= M.targeting.segment_labels[0].to);
+});
+
 test('per-shot trajectories carry coords + quality', () => {
   assert.ok(M.trajectories.length > 500);
   const t = M.trajectories.find((x) => x.result === 'In' && (x.stroke === 'Forehand' || x.stroke === 'Backhand'));

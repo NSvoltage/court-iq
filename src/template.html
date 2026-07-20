@@ -227,17 +227,6 @@ canvas{display:block;width:100%;touch-action:none}
       <div class="card"><h3>Serve speed distribution</h3><p class="hint">Speeds of serves that landed in, both players.</p><div id="serve-speed"></div></div>
     </section>
 
-    <section class="view" data-v="placement">
-      <h2 class="viewhead">Shot placement &amp; depth</h2>
-      <p class="viewsub">Where groundstrokes bounced. Filter to winners or errors to see where points are won and lost.</p>
-      <div class="ctl">
-        <label>Player</label><div class="seg" id="pl-player"></div>
-        <label>Show</label><div class="seg" id="pl-filter"><button data-x="all" class="on">All</button><button data-x="winner">Winners</button><button data-x="error">Errors</button></div>
-        <label>View</label><div class="seg" id="pl-mode"><button data-x="dots" class="on">Dots</button><button data-x="heat">Density</button></div>
-      </div>
-      <div class="grid g2"><div class="card p0"><div id="placement-map"></div></div><div class="card"><h3>Depth profile</h3><p class="hint">How deep bounces land toward the opponent baseline.</p><div id="depth-chart"></div></div></div>
-    </section>
-
     <section class="view" data-v="we">
       <h2 class="viewhead">Winners &amp; errors</h2>
       <p class="viewsub">A point ends on a winner (last ball in) or an error (net/long). This layer is inferred from rally endings — see the Reliability tab for the directly-measured per-shot view.</p>
@@ -274,9 +263,10 @@ canvas{display:block;width:100%;touch-action:none}
       <div class="ctl">
         <label>Hitter</label><div class="seg" id="tg-player"></div>
         <label id="tg-hand-lbl">Their hand</label><div class="seg" id="tg-hand"></div>
+        <label>Map</label><div class="seg" id="tg-map-mode"><button data-x="zones" class="on">Zones</button><button data-x="winner">Winners</button><button data-x="error">Errors</button></div>
       </div>
       <div class="grid g2" style="margin-bottom:16px">
-        <div class="card"><h3 id="tg-map-title">Placement map</h3><p class="hint">Share of groundstrokes landing in each zone of the receiver's court. Net is at the bottom, their baseline at the top.</p><div id="tg-map"></div></div>
+        <div class="card"><h3 id="tg-map-title">Placement map</h3><p class="hint">Zones show the share of groundstrokes in each area; switch to <b>Winners</b>/<b>Errors</b> to plot exactly where those shots landed. Net at the bottom, their baseline at the top.</p><div id="tg-map"></div></div>
         <div class="card"><h3>Side, depth &amp; direction</h3><p class="hint">Lateral targeting (named to the receiver's wings), how deep it lands, and shot direction.</p><div id="tg-break"></div></div>
       </div>
       <div class="card"><h3>How the targeting shifted over the match</h3><p class="hint">The match split into three equal stretches, oldest to newest. Watch the backhand/forehand mix move.</p><div id="tg-shift"></div><div class="insight" id="tg-insight"></div></div>
@@ -375,7 +365,7 @@ function clear(id){const e=document.getElementById(id);e.innerHTML="";return e;}
 function segBind(id,fn){document.querySelectorAll("#"+id+" button").forEach(b=>{b.onclick=()=>{document.querySelectorAll("#"+id+" button").forEach(x=>x.classList.remove("on"));b.classList.add("on");fn(b.dataset.x);};});}
 
 /* ============ NAV + MODE ============ */
-const VIEWS=[["MATCH",[["overview","Overview"],["court3d","Replay"],["points","Points"],["serve","Serve"],["placement","Placement"],["we","Winners & Errors"],["rally","Rally"]]],
+const VIEWS=[["MATCH",[["overview","Overview"],["court3d","Replay"],["points","Points"],["serve","Serve"],["we","Winners & Errors"],["rally","Rally"]]],
   ["PLAYER",[["movement","Movement"],["positioning","Positioning"],["reliability","Reliability"]]],
   ["ANALYTICS",[["patterns","Patterns & Quality"],["targeting","Targeting"]]],
   ["COACH",[["brief","Brief"]]]];
@@ -396,7 +386,7 @@ function loadModel(rawSheets){
 }
 function renderAll(){
   document.getElementById("matchtag").innerHTML=`<b>${M.meta.tracked}</b> vs <b>${M.meta.opp}</b> · ${M.match.total_points} pts · ${M.meta.start_time||""}`;
-  renderOverview();renderPoints();renderServe();renderPlacement();renderWE();renderRally();
+  renderOverview();renderPoints();renderServe();renderWE();renderRally();
   renderMovement();renderPositioning();renderReliability();renderPatterns();renderTargeting();renderBrief();renderFoot();
   if(c3init){buildLegend();} // 3D redraws from live M each frame
 }
@@ -703,31 +693,6 @@ function drawServeSpeed(){
 }
 function legendInto(box,items){const lg=mk("div","legend");items.forEach(([l,c])=>{const d=mk("div","it");d.innerHTML=`<span class="sw" style="background:${c}"></span>${l}`;lg.appendChild(d);});box.appendChild(lg);}
 
-/* ============ PLACEMENT ============ */
-let plState={player:"you",filter:"all",mode:"dots"};
-function renderPlacement(){
-  const seg=clear("pl-player");["you","opp","both"].forEach(k=>{const b=mk("button",(k===plState.player?"on ":"")+(k==="you"?"you":k==="opp"?"opp":""),k==="both"?"Both":disp(k));b.dataset.x=k;b.onclick=()=>{plState.player=k;renderPlacement();};seg.appendChild(b);});
-  segBind("pl-filter",v=>{plState.filter=v;drawPlacement();});segBind("pl-mode",v=>{plState.mode=v;drawPlacement();});
-  drawPlacement();
-}
-function placementData(){return M.trajectories.filter(t=>{if(!(t.stroke==="Forehand"||t.stroke==="Backhand"))return false;if(plState.player!=="both"&&t.player!==plState.player)return false;if(plState.filter!=="all"&&t.outcome!==plState.filter)return false;return true;});}
-function drawPlacement(){
-  const box=clear("placement-map");box.style.padding="6px 12px 14px";
-  const {svg,g,X,Y,sc}=courtSVG(box,{w:520,h:600});const data=placementData();
-  if(plState.mode==="heat"){const nx=14,ny=26,grid={};data.forEach(t=>{const gx=Math.floor((t.bx+DBL)/(DBL*2)*nx),gy=Math.floor(t.by/BASE*ny);grid[gx+","+gy]=(grid[gx+","+gy]||0)+1;});const mx=Math.max(1,...Object.values(grid));for(const k in grid){const[gx,gy]=k.split(",").map(Number);const x0=-DBL+DBL*2*gx/nx,x1=-DBL+DBL*2*(gx+1)/nx,y0=BASE*gy/ny,y1=BASE*(gy+1)/ny,v=grid[k]/mx;g.appendChild(el("rect",{x:X(x0),y:Y(y1),width:(x1-x0)*sc,height:(y1-y0)*sc,fill:plState.player==="opp"?C.opp:C.you,"fill-opacity":0.12+v*0.7}));}}
-  else{data.forEach(t=>{const col=t.outcome==="winner"?C.good:t.outcome==="error"?C.bad:colOf(t.player);const c=el("circle",{cx:X(t.bx),cy:Y(t.by),r:t.outcome==="rally"?2.4:3.6,fill:col,"fill-opacity":t.outcome==="rally"?.4:.75,stroke:col,"stroke-width":t.outcome==="rally"?0:1});c.style.cursor="pointer";c.addEventListener("mousemove",e=>tip(`<b>${disp(t.player)} ${t.stroke}</b><br><span class="mut">${t.spin} · ${t.dir} · ${t.result} · ${t.spd}mph</span>`,e.clientX,e.clientY));c.addEventListener("mouseleave",untip);g.appendChild(c);});}
-  box.appendChild(svg);drawDepth();
-}
-function drawDepth(){
-  const box=clear("depth-chart");const data=placementData();const bins=[];for(let d=0;d<=12;d++)bins.push(0);
-  data.forEach(t=>{const dn=Math.abs(t.by-NET);bins[Math.min(11,Math.floor(dn))]++;});
-  const W=box.clientWidth||500,H=280,P={l:34,r:14,t:10,b:40},iw=W-P.l-P.r,ih=H-P.t-P.b,mx=Math.max(1,...bins),bw=iw/bins.length;
-  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:H});
-  bins.forEach((v,i)=>{const bh=ih*v/mx;svg.appendChild(el("rect",{x:P.l+i*bw+bw*0.12,y:P.t+ih-bh,width:bw*0.76,height:bh,rx:3,fill:i<3?C.warn:(plState.player==="opp"?C.opp:C.you),opacity:.85}));});
-  svg.appendChild(T(P.l,H-8,"◀ near net (short)",{class:"axlab"}));svg.appendChild(T(W-P.r,H-8,"deep ▶",{"text-anchor":"end",class:"axlab"}));
-  box.appendChild(svg);
-}
-
 /* ============ WINNERS & ERRORS ============ */
 function renderWE(){groupedBars("we-err","errors_by_stroke",["Serve","Forehand","Backhand","Volley","Overhead"]);groupedBars("we-win","winners_by_stroke",["Forehand","Backhand","Volley","Overhead"]);drawRatio();drawNetType();drawDirBars();}
 function groupedBars(id,key,order){
@@ -913,12 +878,13 @@ function drawOpenings(){
 }
 
 /* ============ TARGETING ============ */
-let tgState={player:"you",hand:{you:"R",opp:"R"}};
+let tgState={player:"you",hand:{you:"R",opp:"R"},map:"zones"};
 function renderTargeting(){
   const seg=clear("tg-player");["you","opp"].forEach(k=>{const b=mk("button",(k===tgState.player?"on ":"")+(k==="you"?"you":"opp"),disp(k));b.dataset.x=k;b.onclick=()=>{tgState.player=k;renderTargeting();};seg.appendChild(b);});
   const recv=otherK(tgState.player);
   document.getElementById("tg-hand-lbl").textContent=disp(recv)+"'s hand";
   const hs=clear("tg-hand");[["R","Right"],["L","Left"]].forEach(([v,l])=>{const b=mk("button",tgState.hand[recv]===v?"on":"",l);b.dataset.x=v;b.onclick=()=>{tgState.hand[recv]=v;renderTargeting();};hs.appendChild(b);});
+  segSet("tg-map-mode",tgState.map);segBind("tg-map-mode",v=>{tgState.map=v;drawTargetMap();});
   document.getElementById("tg-map-title").textContent=`Placement map — ${disp(tgState.player)} → ${disp(recv)}`;
   drawTargetMap();drawTargetBreakdown();drawTargetShift();
 }
@@ -933,14 +899,16 @@ function drawTargetMap(){
   const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:"auto"});svg.style.maxHeight="410px";
   // court surface
   svg.appendChild(el("rect",{x:X(-DBL),y:oyTop,width:cW,height:cH,fill:"#12293e",rx:4}));
-  // zone shading (3 lateral bands × 3 depth bands), from live grid
-  const colE=[-DBL,-SGL/3,SGL/3,DBL],depE=[1,0.66,0.33,0]; // depth top→bottom
-  const maxp=Math.max(1,...tg.grid.flat().map(z=>z.pct));
-  for(let r=0;r<3;r++)for(let c=0;c<3;c++){const z=tg.grid[r][c];
-    const x0=X(colE[c]),x1=X(colE[c+1]),y0=Yd(depE[r]),y1=Yd(depE[r+1]);
-    svg.appendChild(el("rect",{x:x0,y:y0,width:x1-x0,height:y1-y0,fill:col,"fill-opacity":(0.06+0.8*(z.pct/maxp)).toFixed(3)}));
-    if(z.pct>=2){svg.appendChild(T((x0+x1)/2,(y0+y1)/2-1,z.pct+"%",{"text-anchor":"middle",fill:"#fff","font-size":15,"font-weight":800}));
-      svg.appendChild(T((x0+x1)/2,(y0+y1)/2+13,z.n,{"text-anchor":"middle",fill:"rgba(255,255,255,.6)","font-size":9.5}));}}
+  const zones=tgState.map==="zones";
+  if(zones){ // zone shading (3 lateral bands × 3 depth bands), from live grid
+    const colE=[-DBL,-SGL/3,SGL/3,DBL],depE=[1,0.66,0.33,0]; // depth top→bottom
+    const maxp=Math.max(1,...tg.grid.flat().map(z=>z.pct));
+    for(let r=0;r<3;r++)for(let c=0;c<3;c++){const z=tg.grid[r][c];
+      const x0=X(colE[c]),x1=X(colE[c+1]),y0=Yd(depE[r]),y1=Yd(depE[r+1]);
+      svg.appendChild(el("rect",{x:x0,y:y0,width:x1-x0,height:y1-y0,fill:col,"fill-opacity":(0.06+0.8*(z.pct/maxp)).toFixed(3)}));
+      if(z.pct>=2){svg.appendChild(T((x0+x1)/2,(y0+y1)/2-1,z.pct+"%",{"text-anchor":"middle",fill:"#fff","font-size":15,"font-weight":800}));
+        svg.appendChild(T((x0+x1)/2,(y0+y1)/2+13,z.n,{"text-anchor":"middle",fill:"rgba(255,255,255,.6)","font-size":9.5}));}}
+  }
   // court lines
   const L=(a,b,c,d,st={})=>svg.appendChild(el("line",Object.assign({x1:X(a),y1:Yd(b),x2:X(c),y2:Yd(d),stroke:"rgba(220,235,255,.5)","stroke-width":1.1},st)));
   const svcDeep=6.4/(BASE-NET); // service line 6.4m from net
@@ -948,6 +916,16 @@ function drawTargetMap(){
   L(-SGL,svcDeep,SGL,svcDeep);L(0,svcDeep,0,0);                                     // service line + center T
   L(-0.35,1,0.35,1,{stroke:"rgba(220,235,255,.7)"});                               // center mark
   svg.appendChild(el("line",{x1:X(-DBL),y1:Yd(0),x2:X(DBL),y2:Yd(0),stroke:"#fff","stroke-width":2.4})); // net
+  // outcome dots (absorbed from the old Placement view) — where winners/errors landed
+  if(!zones){
+    const cc=tgState.map==="winner"?C.good:C.bad;
+    const dots=M.trajectories.filter(t=>t.player===tgState.player&&(t.stroke==="Forehand"||t.stroke==="Backhand")&&t.outcome===tgState.map&&typeof t.bx==="number"&&typeof t.by==="number");
+    dots.forEach(t=>{const far=t.by>NET,rx=far?-t.bx:t.bx,deep=(far?(t.by-NET):(NET-t.by))/(BASE-NET);
+      const cx=clip(X(rx),X(-DBL)-6,X(DBL)+6),cy=clip(Yd(clip(deep,-0.08,1.05)),oyTop-6,oyTop+cH+8);
+      const c=el("circle",{cx,cy,r:3.8,fill:cc,"fill-opacity":.62,stroke:cc,"stroke-width":1});c.style.cursor="pointer";
+      c.addEventListener("mousemove",e=>tip(`<b>${disp(t.player)} ${t.stroke} ${tgState.map}</b><br><span class="mut">${t.spin} · ${t.dir} · ${t.spd}mph</span>`,e.clientX,e.clientY));c.addEventListener("mouseleave",untip);svg.appendChild(c);});
+    svg.appendChild(T(X(-DBL),oyTop-11,`${dots.length} ${tgState.map==="winner"?"winners":"errors"}`,{fill:cc,"font-size":12,"font-weight":700}));
+  }
   // orientation labels — left band vs right band named to the receiver's wings
   const leftIsBH=hand==="R";
   svg.appendChild(T(X(-SGL/2),oyTop-11,(leftIsBH?"◀ Backhand":"◀ Forehand"),{"text-anchor":"middle",fill:leftIsBH?TGC.bh:TGC.fh,"font-size":11.5,"font-weight":700}));
@@ -1104,7 +1082,7 @@ function render3D(){
   const L=(a,b)=>{const p=project(a[0],a[1],a[2]||0),q=project(b[0],b[1],b[2]||0);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();};
   L([-DBL,0],[DBL,0]);L([-DBL,BASE],[DBL,BASE]);L([-DBL,0],[-DBL,BASE]);L([DBL,0],[DBL,BASE]);L([-SGL,0],[-SGL,BASE]);L([SGL,0],[SGL,BASE]);L([-SGL,NET-6.4],[SGL,NET-6.4]);L([-SGL,NET+6.4],[SGL,NET+6.4]);L([0,NET-6.4],[0,NET+6.4]);
   drawNet(ctx);
-  if(c3state.mode==="replay"){renderReplay(ctx);document.getElementById("c3-hud").innerHTML=`rally replay<br>yaw ${(cam.yaw%6.283).toFixed(2)} · pitch ${cam.pitch.toFixed(2)}`;return;}
+  if(c3state.mode==="replay"){renderReplay(ctx);document.getElementById("c3-hud").innerHTML="";return;}
   const arcs=filteredTraj().map(buildArcPts);arcs.sort((a,b)=>b.depth-a.depth);
   const dmin=Math.min(...arcs.map(a=>a.depth)),dmax=Math.max(...arcs.map(a=>a.depth));const near=a=>dmax>dmin?(dmax-a.depth)/(dmax-dmin):1;const dimRally=c3state.color==="outcome";
   for(const a of arcs){const isRally=a.t.outcome==="rally",df=0.45+0.55*near(a);ctx.beginPath();a.pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.lineCap="round";ctx.strokeStyle=a.color;ctx.globalAlpha=(isRally?(dimRally?0.14:0.4):0.66)*df;ctx.lineWidth=a.t.stroke==="Serve"?1.9:isRally?0.85:1.35;ctx.stroke();}

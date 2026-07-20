@@ -1,0 +1,58 @@
+# Contributing to Court IQ
+
+Thanks for your interest! Court IQ is intentionally small, dependency-free, and
+inspectable. This guide covers the workflow and the few conventions that keep it
+that way.
+
+## Setup
+
+```bash
+git clone https://github.com/NSvoltage/court-iq.git
+cd court-iq
+npm run dev     # build + serve at http://localhost:5173
+npm test        # run the unit tests
+```
+
+No `npm install` is required — there are no runtime or build dependencies.
+
+## Project layout
+
+- `src/template.html` — the UI. All views and rendering live here (plain SVG/Canvas, no framework). Contains the `/*__ASSETS__*/` marker the build fills in.
+- `src/engine/base.js` — `window.SVEngine.build(rawSheets)`: parse + dedupe + measured metrics.
+- `src/engine/augment.js` — `window.SVEngine3.build`: runs the base engine, then adds shot quality, outcome reconstruction, and patterns.
+- `src/engine/career.js` — `window.Career`: per-match fingerprints, trend math, insights, and `localStorage` persistence.
+- `src/vendor/` — vendored `fflate` + the `xlsxlite` reader.
+- `scripts/build.js` — concatenates the above into `dist/index.html`.
+- `test/` — `node:test` unit tests.
+
+Each engine module is a plain IIFE that attaches to `window` (or `globalThis` in
+Node), which is why the same files run both in the browser and in the tests.
+
+## Conventions
+
+- **Keep it dependency-free.** No runtime `npm` packages, no CDN links (the app
+  targets strict CSPs). Vendor anything new under `src/vendor/` and record it in
+  `THIRD_PARTY.md`.
+- **Measured vs. modelled.** If you add a metric, be clear about whether it is
+  measured from coordinates/speed/result or inferred. Modelled numbers are
+  labelled as such in the UI.
+- **Test engine changes.** If you touch the engines, add/adjust a case in
+  `test/` and keep `npm test` green.
+
+## Adding a tracked metric (career trends/insights)
+
+The metric system is table-driven. To add one:
+
+1. Add an entry to the `METRICS` array in `src/engine/career.js` with a `key`,
+   `label`, `group`, `goodDir` (`+1` higher-is-better, `-1` lower-is-better,
+   `0` neutral), `modeled` flag, `unit`, and a `get: M => …` accessor.
+2. (Optional) add its `key` to `HEADLINE` to show it on the Trends grid by default.
+
+It will automatically flow into fingerprints, the trend badges, and the insights
+feed — no other wiring needed.
+
+## Pull requests
+
+- Keep changes focused and describe the "why".
+- Run `npm run build` and open `dist/index.html` to sanity-check the UI.
+- Be honest in copy: prefer "estimated"/"modelled" over implying certainty.

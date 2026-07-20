@@ -1,0 +1,28 @@
+{
+  "name": "court-iq",
+  "version": "1.0.0",
+  "description": "Self-hosted tennis match & player analytics from SwingVision exports — 3D shot maps, shot-quality scoring, reconstructed outcomes, and longitudinal trends. Runs entirely in your browser.",
+  "license": "MIT",
+  "type": "commonjs",
+  "private": false,
+  "scripts": {
+    "build": "node scripts/build.js",
+    "serve": "node scripts/serve.js",
+    "dev": "node scripts/build.js && node scripts/serve.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "tennis",
+    "analytics",
+    "swingvision",
+    "sports-analytics",
+    "data-visualization",
+    "self-hosted",
+    "static-site"
+  ],
+  "author": "",
+  "dependencies": {}
+}

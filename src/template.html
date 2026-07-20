@@ -262,7 +262,7 @@ canvas{display:block;width:100%;touch-action:none}
         <label>Map</label><div class="seg" id="tg-map-mode"><button data-x="zones" class="on">Zones</button><button data-x="winner">Winners</button><button data-x="error">Errors</button></div>
       </div>
       <div class="grid g2" style="margin-bottom:16px">
-        <div class="card"><h3 id="tg-map-title">Placement map</h3><p class="hint">Where groundstrokes land in the opponent's court. Zones show the share per area; switch to <b>Winners</b>/<b>Errors</b> to plot exactly where those shots landed.</p><div id="tg-map"></div></div>
+        <div class="card"><h3 id="tg-map-title">Placement map</h3><p class="hint">Where groundstrokes land in the opponent's court. <b>Winners</b> plot where they landed in; <b>Errors</b> are placed by how they missed — into the net (at the net), long (past the baseline), or wide (past the sideline).</p><div id="tg-map"></div></div>
         <div class="card"><h3 id="tg-break-title">Shot selection by wing</h3><p class="hint">From each of the hitter's own wings, where the ball goes — so you can see, say, whether the forehand prefers down-the-line or inside-out.</p><div id="tg-break"></div></div>
       </div>
       <div class="card"><h3>How the targeting shifted over the match</h3><p class="hint">The match split into three equal stretches, oldest to newest — the mix of balls sent to the opponent's backhand, middle, and forehand side.</p><div id="tg-shift"></div><div class="insight" id="tg-insight"></div></div>
@@ -879,7 +879,7 @@ function renderTargeting(){
 }
 function drawTargetMap(){
   const box=clear("tg-map"),tg=M.targeting[tgState.player],recv=otherK(tgState.player),hand=tgState.hand[recv],col=colOf(tgState.player);
-  const W=440,H=430,padX=26,padTop=66,padBot=30; // extra top room for the opponent figure
+  const W=440,H=452,padX=26,padTop=88,padBot=32; // top room for figure + labels + "long" out-band
   const worldW=DBL*2,worldH=BASE-NET; // one half-court, net→baseline
   const sc=Math.min((W-2*padX)/worldW,(H-padTop-padBot)/worldH);
   const cW=worldW*sc,cH=worldH*sc,ox=W/2,oyTop=padTop; // opponent baseline at top, net at bottom
@@ -908,23 +908,32 @@ function drawTargetMap(){
   L(-SGL,svcDeep,SGL,svcDeep);L(0,svcDeep,0,0);
   L(-0.35,1,0.35,1,{stroke:"rgba(220,235,255,.7)"});
   svg.appendChild(el("line",{x1:xMin,y1:Yd(0),x2:xMax,y2:Yd(0),stroke:"#fff","stroke-width":2.4})); // net
-  // outcome dots — where winners/errors landed
-  if(!zones){
-    const cc=tgState.map==="winner"?C.good:C.bad;
-    const dots=M.trajectories.filter(t=>t.player===tgState.player&&(t.stroke==="Forehand"||t.stroke==="Backhand")&&t.outcome===tgState.map&&typeof t.bx==="number"&&typeof t.by==="number");
-    dots.forEach(t=>{const far=t.by>NET,rx=far?-t.bx:t.bx,deep=(far?(t.by-NET):(NET-t.by))/(BASE-NET);
-      const cx=clip(X(rx),xMin-6,xMax+6),cy=clip(Yd(clip(deep,-0.08,1.05)),oyTop-6,oyTop+cH+8);
-      const c=el("circle",{cx,cy,r:3.8,fill:cc,"fill-opacity":.62,stroke:cc,"stroke-width":1});c.style.cursor="pointer";
-      c.addEventListener("mousemove",e=>tip(`<b>${disp(t.player)} ${t.stroke} ${tgState.map}</b><br><span class="mut">${t.spin} · ${t.dir} · ${t.spd}mph</span>`,e.clientX,e.clientY));c.addEventListener("mouseleave",untip);svg.appendChild(c);});
-    svg.appendChild(T(xMin,oyTop-8,`${dots.length} ${tgState.map==="winner"?"winners":"errors"} landed here`,{fill:cc,"font-size":11.5,"font-weight":700}));
-  }
-  // opponent figure (front-on, facing you) at their baseline, with racket on their forehand wing
-  drawOppFigure(svg,ox,26,hand,recv);
-  // wing labels along the baseline — the opponent's OWN forehand / backhand side
+  // opponent figure + wing labels (drawn first so dots sit on top)
+  drawOppFigure(svg,ox,20,hand,recv);
   const fhX=hand==="R"?X(SGL*0.62):X(-SGL*0.62),bhX=hand==="R"?X(-SGL*0.62):X(SGL*0.62);
-  svg.appendChild(T(fhX,oyTop-8,`${disp(recv)} forehand`,{"text-anchor":"middle",fill:TGC.fh,"font-size":11.5,"font-weight":700}));
-  svg.appendChild(T(bhX,oyTop-8,`${disp(recv)} backhand`,{"text-anchor":"middle",fill:TGC.bh,"font-size":11.5,"font-weight":700}));
-  svg.appendChild(T(ox,H-8,`top = ${disp(recv)}'s baseline (deep) · bottom = net (you hit from below)`,{"text-anchor":"middle",fill:C.muted,"font-size":10}));
+  svg.appendChild(T(fhX,52,`${disp(recv)} forehand`,{"text-anchor":"middle",fill:TGC.fh,"font-size":11.5,"font-weight":700}));
+  svg.appendChild(T(bhX,52,`${disp(recv)} backhand`,{"text-anchor":"middle",fill:TGC.bh,"font-size":11.5,"font-weight":700}));
+  // outcome dots. Winners land IN the court. Errors are placed by their MEASURED result,
+  // NOT the raw bounce coord: a net ball's recorded "bounce" is a phantom point mid-court,
+  // so we show net errors at the net, long balls past the baseline, wide balls past the sideline.
+  let bottomCap=`top = ${disp(recv)}'s baseline (deep) · bottom = net (you hit from below)`;
+  if(!zones){
+    const isErr=tgState.map==="error",cc=isErr?C.bad:C.good;
+    const dots=M.trajectories.filter(t=>t.player===tgState.player&&(t.stroke==="Forehand"||t.stroke==="Backhand")&&t.outcome===tgState.map&&typeof t.bx==="number"&&typeof t.by==="number");
+    let nNet=0,nLong=0,nWide=0,nIn=0;
+    dots.forEach(t=>{
+      const far=t.by>NET,rx=far?-t.bx:t.bx,deep=(far?(t.by-NET):(NET-t.by))/(BASE-NET),lat=Math.abs(t.bx);
+      let cx,cy,why;
+      if(isErr&&t.result==="Net"){nNet++;why="into the net";cx=clip(X(rx),xMin+6,xMax-6);cy=Yd(0)+9;}
+      else if(isErr&&deep>1.0){nLong++;why="long — past the baseline";cx=clip(X(rx),xMin+6,xMax-6);cy=oyTop-9;}
+      else if(isErr&&lat>SGL){nWide++;why="wide — past the sideline";cx=(X(rx)<ox?xMin-9:xMax+9);cy=clip(Yd(clip(deep,0,1)),oyTop+8,oyTop+cH-8);}
+      else{nIn++;why=isErr?"landed in the court":"winner";cx=clip(X(rx),xMin+4,xMax-4);cy=clip(Yd(clip(deep,0,1)),oyTop+4,oyTop+cH-4);}
+      const c=el("circle",{cx,cy,r:3.8,fill:cc,"fill-opacity":.6,stroke:cc,"stroke-width":1});c.style.cursor="pointer";
+      c.addEventListener("mousemove",e=>tip(`<b>${disp(t.player)} ${t.stroke}${isErr?" error":""}</b><br><span class="mut">${isErr?why+" · ":""}${t.dir} · ${t.spd}mph</span>`,e.clientX,e.clientY));c.addEventListener("mouseleave",untip);svg.appendChild(c);
+    });
+    bottomCap=isErr?`${nNet} into the net (shown at net) · ${nLong} long · ${nWide} wide${nIn?` · ${nIn} in-court`:""}`:`${dots.length} winners — where they landed`;
+  }
+  svg.appendChild(T(ox,H-9,bottomCap,{"text-anchor":"middle",fill:C.muted,"font-size":10}));
   box.appendChild(svg);
 }
 function drawOppFigure(svg,cx,cy,hand,recv){

@@ -12,10 +12,7 @@ the analytics, storage of your match history — runs in your browser. **No
 server, no account, no upload.** Your data never leaves your machine.
 
 <p align="center">
-  <img src="media/overview.png" width="49%" alt="Match overview">
-  <img src="media/court-3d.png" width="49%" alt="3D shot trajectories">
-  <img src="media/trends.png" width="49%" alt="Trends over time">
-  <img src="media/insights.png" width="49%" alt="Auto-generated insights">
+  <img src="media/demo.gif" width="90%" alt="Court IQ demo — overview, 3D shot trajectories, rally replay, serve map, trends and insights">
 </p>
 
 ---
@@ -63,6 +60,15 @@ Load several files at once to build up history.
 - **History** — every match you load is saved in your browser; export/import a portable career file to back up or move devices.
 - **Trends** — each key metric over time with a rolling average and an *improving / regressing* read.
 - **Insights** — what changed since your last match, where you're trending, and recurring behaviours (e.g. chronic over-hitting).
+
+## Screenshots
+
+<p align="center">
+  <img src="media/overview.png" width="49%" alt="Match overview">
+  <img src="media/court-3d.png" width="49%" alt="3D shot trajectories">
+  <img src="media/trends.png" width="49%" alt="Trends over time">
+  <img src="media/insights.png" width="49%" alt="Auto-generated insights">
+</p>
 
 ## Measured vs. modelled — an honest tool
 

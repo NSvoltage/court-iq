@@ -165,20 +165,16 @@ canvas{display:block;width:100%;touch-action:none}
     </section>
 
     <section class="view" data-v="court3d">
-      <h2 class="viewhead">3D shot trajectories</h2>
-      <p class="viewsub">Every tracked ball reconstructed in 3D from contact (x, y, height) to bounce. Drag to orbit; scroll to zoom. Switch to <b>Rally replay</b> to watch any point shot-by-shot.</p>
-      <div class="ctl">
-        <label>Color</label><div class="seg" id="c3-color"><button data-x="outcome" class="on">Outcome</button><button data-x="player">Player</button><button data-x="spin">Spin</button></div>
-        <label>Shots</label><div class="seg" id="c3-shot"><button data-x="all" class="on">All</button><button data-x="serve">Serves</button><button data-x="ground">Groundstrokes</button></div>
-        <div class="seg" id="c3-orbit"><button data-x="orbit" class="on">◐ Auto-orbit</button><button data-x="reset">⟲ Reset</button></div>
-      </div>
+      <h2 class="viewhead">Rally replay</h2>
+      <p class="viewsub">Watch any point reconstructed in 3D, shot by shot. Pick a point from the panel on the right (or the Points tab and momentum chart), and use ◀ ▶ or arrow keys to move around. Drag to orbit; scroll to zoom.</p>
       <div class="ctl" style="margin-bottom:12px">
-        <label>Mode</label><div class="seg" id="c3-mode"><button data-x="explore" class="on">Explore all</button><button data-x="replay">▶ Rally replay</button></div>
-        <div id="c3-rep" style="display:none;align-items:center;gap:8px;flex-wrap:wrap">
+        <div id="c3-rep" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <div class="seg"><button id="rp-prev">◀</button><button id="rp-play" class="on">⏸</button><button id="rp-next">▶</button></div>
           <button class="loadbtn" id="rp-toggle" style="padding:7px 12px">☰ Points</button>
           <span id="rp-label" style="font-size:12.5px;color:var(--ink2)"></span>
         </div>
+        <div class="spacer"></div>
+        <div class="seg" id="c3-orbit"><button data-x="orbit" class="on">◐ Auto-orbit</button><button data-x="reset">⟲ Reset</button></div>
       </div>
       <div class="replay-layout" id="replay-layout">
         <div class="canvas-wrap"><canvas id="court3d" height="580"></canvas><div class="hud" id="c3-hud"></div><div class="cnote" id="c3-note">drag to rotate · scroll to zoom</div>
@@ -198,6 +194,7 @@ canvas{display:block;width:100%;touch-action:none}
       </div>
       <div class="legend" id="c3-legend" style="margin-top:14px"></div>
     </section>
+    <!-- explore-all mode retired: it duplicated the rally replay -->
 
     <section class="view" data-v="points">
       <h2 class="viewhead">Point-by-point log</h2>
@@ -230,17 +227,6 @@ canvas{display:block;width:100%;touch-action:none}
       <div class="card"><h3>Serve speed distribution</h3><p class="hint">Speeds of serves that landed in, both players.</p><div id="serve-speed"></div></div>
     </section>
 
-    <section class="view" data-v="placement">
-      <h2 class="viewhead">Shot placement &amp; depth</h2>
-      <p class="viewsub">Where groundstrokes bounced. Filter to winners or errors to see where points are won and lost.</p>
-      <div class="ctl">
-        <label>Player</label><div class="seg" id="pl-player"></div>
-        <label>Show</label><div class="seg" id="pl-filter"><button data-x="all" class="on">All</button><button data-x="winner">Winners</button><button data-x="error">Errors</button></div>
-        <label>View</label><div class="seg" id="pl-mode"><button data-x="dots" class="on">Dots</button><button data-x="heat">Density</button></div>
-      </div>
-      <div class="grid g2"><div class="card p0"><div id="placement-map"></div></div><div class="card"><h3>Depth profile</h3><p class="hint">How deep bounces land toward the opponent baseline.</p><div id="depth-chart"></div></div></div>
-    </section>
-
     <section class="view" data-v="we">
       <h2 class="viewhead">Winners &amp; errors</h2>
       <p class="viewsub">A point ends on a winner (last ball in) or an error (net/long). This layer is inferred from rally endings — see the Reliability tab for the directly-measured per-shot view.</p>
@@ -263,11 +249,23 @@ canvas{display:block;width:100%;touch-action:none}
         <div class="card"><h3 id="pt-s1-title">Serve +1 patterns</h3><p class="hint">Serve placement → the server's next ball, and how often the point was won.</p><div id="pt-serveplus1"></div></div>
         <div class="card"><h3>Shot quality — you vs opponent</h3><p class="hint">Average quality of in-play shots (0–100). Higher = harder, deeper, more angled.</p><div id="pt-quality"></div></div>
       </div>
-      <div class="grid g2" style="margin-bottom:16px">
-        <div class="card"><h3 id="pt-fh-title">Forehand direction tendency</h3><p class="hint">Where your forehand goes. Predictable patterns can be read by opponents.</p><div id="pt-fh"></div></div>
-        <div class="card"><h3 id="pt-bh-title">Backhand direction tendency</h3><p class="hint">Where your backhand goes.</p><div id="pt-bh"></div></div>
-      </div>
       <div class="card"><h3>Most common rally openings</h3><p class="hint">The three-shot sequence that starts points most often (serve → return → serve+1 direction).</p><div id="pt-openings"></div></div>
+    </section>
+
+    <section class="view" data-v="targeting">
+      <h2 class="viewhead">Targeting — where the ball goes</h2>
+      <p class="viewsub">Two questions: <b>where in the opponent's court</b> does <span id="tg-name1">the hitter</span> land the ball (the map), and <b>from each of their own wings</b>, what shot do they pick (forehand vs backhand direction). The little figure shows the opponent standing at their baseline, facing you.</p>
+      <span class="conf high"><span class="dot"></span> Directly measured (bounce coordinates)</span>
+      <div class="ctl">
+        <label>Hitter</label><div class="seg" id="tg-player"></div>
+        <label id="tg-hand-lbl">Their hand</label><div class="seg" id="tg-hand"></div>
+        <label>Map</label><div class="seg" id="tg-map-mode"><button data-x="zones" class="on">Zones</button><button data-x="winner">Winners</button><button data-x="error">Errors</button></div>
+      </div>
+      <div class="grid g2" style="margin-bottom:16px">
+        <div class="card"><h3 id="tg-map-title">Placement map</h3><p class="hint">Where groundstrokes land in the opponent's court. <b>Winners</b> plot where they landed in; <b>Errors</b> are placed by how they missed — into the net (at the net), long (past the baseline), or wide (past the sideline).</p><div id="tg-map"></div></div>
+        <div class="card"><h3 id="tg-break-title">Shot selection by wing</h3><p class="hint">From each of the hitter's own wings, where the ball goes — so you can see, say, whether the forehand prefers down-the-line or inside-out.</p><div id="tg-break"></div></div>
+      </div>
+      <div class="card"><h3>How the targeting shifted over the match</h3><p class="hint">The match split into three equal stretches, oldest to newest — the mix of balls sent to the opponent's backhand, middle, and forehand side.</p><div id="tg-shift"></div><div class="insight" id="tg-insight"></div></div>
     </section>
 
     <!-- PLAYER LAB -->
@@ -345,6 +343,8 @@ canvas{display:block;width:100%;touch-action:none}
 /* ============ shared helpers ============ */
 const C={you:"#3987e5",opp:"#e07a3c",good:"#22c55e",bad:"#ef4444",warn:"#f5b301",rally:"#5b6b82",ink:"#f2f5fa",ink2:"#aab6c8",muted:"#6d7c92",line:"#1e2a3d",panel2:"#0e1420"};
 const SPINC={Topspin:"#3987e5",Slice:"#22c55e",Kick:"#f5b301",Flat:"#e07a3c"};
+const TGC={bh:"#a78bfa",fh:"#2dd4bf",mid:"#5b6b82"};
+const otherK=k=>k==="you"?"opp":"you";
 const NS="http://www.w3.org/2000/svg";
 const el=(t,a={})=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;};
 const T=(x,y,s,a={})=>{const t=el("text",Object.assign({x,y},a));t.textContent=s;if(!a.class&&!a.fill)t.setAttribute("class","axlab");return t;};
@@ -361,9 +361,9 @@ function clear(id){const e=document.getElementById(id);e.innerHTML="";return e;}
 function segBind(id,fn){document.querySelectorAll("#"+id+" button").forEach(b=>{b.onclick=()=>{document.querySelectorAll("#"+id+" button").forEach(x=>x.classList.remove("on"));b.classList.add("on");fn(b.dataset.x);};});}
 
 /* ============ NAV + MODE ============ */
-const VIEWS=[["MATCH",[["overview","Overview"],["court3d","3D Court"],["points","Points"],["serve","Serve"],["placement","Placement"],["we","Winners & Errors"],["rally","Rally"]]],
+const VIEWS=[["MATCH",[["overview","Overview"],["court3d","Replay"],["points","Points"],["serve","Serve"],["we","Winners & Errors"],["rally","Rally"]]],
   ["PLAYER",[["movement","Movement"],["positioning","Positioning"],["reliability","Reliability"]]],
-  ["ANALYTICS",[["patterns","Patterns & Quality"]]],
+  ["ANALYTICS",[["patterns","Patterns & Quality"],["targeting","Targeting"]]],
   ["COACH",[["brief","Brief"]]]];
 const CAREER_VIEWS=[["",[["library","History"],["trends","Trends"],["insights","Insights"]]]];
 let appMode="match", curView={match:"overview",career:"library"};
@@ -382,8 +382,8 @@ function loadModel(rawSheets){
 }
 function renderAll(){
   document.getElementById("matchtag").innerHTML=`<b>${M.meta.tracked}</b> vs <b>${M.meta.opp}</b> · ${M.match.total_points} pts · ${M.meta.start_time||""}`;
-  renderOverview();renderPoints();renderServe();renderPlacement();renderWE();renderRally();
-  renderMovement();renderPositioning();renderReliability();renderPatterns();renderBrief();renderFoot();
+  renderOverview();renderPoints();renderServe();renderWE();renderRally();
+  renderMovement();renderPositioning();renderReliability();renderPatterns();renderTargeting();renderBrief();renderFoot();
   if(c3init){buildLegend();} // 3D redraws from live M each frame
 }
 function loadInto(m){M=m;byPoint=groupTraj();pointIds=Object.keys(byPoint).map(Number).sort((a,b)=>a-b);scoreByPt=buildScore();replay.idx=Math.max(0,pointIds.findIndex(p=>byPoint[p].length>=8&&byPoint[p].length<=14));replay.shot=0;replay.u=0;renderAll();}
@@ -689,31 +689,6 @@ function drawServeSpeed(){
 }
 function legendInto(box,items){const lg=mk("div","legend");items.forEach(([l,c])=>{const d=mk("div","it");d.innerHTML=`<span class="sw" style="background:${c}"></span>${l}`;lg.appendChild(d);});box.appendChild(lg);}
 
-/* ============ PLACEMENT ============ */
-let plState={player:"you",filter:"all",mode:"dots"};
-function renderPlacement(){
-  const seg=clear("pl-player");["you","opp","both"].forEach(k=>{const b=mk("button",(k===plState.player?"on ":"")+(k==="you"?"you":k==="opp"?"opp":""),k==="both"?"Both":disp(k));b.dataset.x=k;b.onclick=()=>{plState.player=k;renderPlacement();};seg.appendChild(b);});
-  segBind("pl-filter",v=>{plState.filter=v;drawPlacement();});segBind("pl-mode",v=>{plState.mode=v;drawPlacement();});
-  drawPlacement();
-}
-function placementData(){return M.trajectories.filter(t=>{if(!(t.stroke==="Forehand"||t.stroke==="Backhand"))return false;if(plState.player!=="both"&&t.player!==plState.player)return false;if(plState.filter!=="all"&&t.outcome!==plState.filter)return false;return true;});}
-function drawPlacement(){
-  const box=clear("placement-map");box.style.padding="6px 12px 14px";
-  const {svg,g,X,Y,sc}=courtSVG(box,{w:520,h:600});const data=placementData();
-  if(plState.mode==="heat"){const nx=14,ny=26,grid={};data.forEach(t=>{const gx=Math.floor((t.bx+DBL)/(DBL*2)*nx),gy=Math.floor(t.by/BASE*ny);grid[gx+","+gy]=(grid[gx+","+gy]||0)+1;});const mx=Math.max(1,...Object.values(grid));for(const k in grid){const[gx,gy]=k.split(",").map(Number);const x0=-DBL+DBL*2*gx/nx,x1=-DBL+DBL*2*(gx+1)/nx,y0=BASE*gy/ny,y1=BASE*(gy+1)/ny,v=grid[k]/mx;g.appendChild(el("rect",{x:X(x0),y:Y(y1),width:(x1-x0)*sc,height:(y1-y0)*sc,fill:plState.player==="opp"?C.opp:C.you,"fill-opacity":0.12+v*0.7}));}}
-  else{data.forEach(t=>{const col=t.outcome==="winner"?C.good:t.outcome==="error"?C.bad:colOf(t.player);const c=el("circle",{cx:X(t.bx),cy:Y(t.by),r:t.outcome==="rally"?2.4:3.6,fill:col,"fill-opacity":t.outcome==="rally"?.4:.75,stroke:col,"stroke-width":t.outcome==="rally"?0:1});c.style.cursor="pointer";c.addEventListener("mousemove",e=>tip(`<b>${disp(t.player)} ${t.stroke}</b><br><span class="mut">${t.spin} · ${t.dir} · ${t.result} · ${t.spd}mph</span>`,e.clientX,e.clientY));c.addEventListener("mouseleave",untip);g.appendChild(c);});}
-  box.appendChild(svg);drawDepth();
-}
-function drawDepth(){
-  const box=clear("depth-chart");const data=placementData();const bins=[];for(let d=0;d<=12;d++)bins.push(0);
-  data.forEach(t=>{const dn=Math.abs(t.by-NET);bins[Math.min(11,Math.floor(dn))]++;});
-  const W=box.clientWidth||500,H=280,P={l:34,r:14,t:10,b:40},iw=W-P.l-P.r,ih=H-P.t-P.b,mx=Math.max(1,...bins),bw=iw/bins.length;
-  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:H});
-  bins.forEach((v,i)=>{const bh=ih*v/mx;svg.appendChild(el("rect",{x:P.l+i*bw+bw*0.12,y:P.t+ih-bh,width:bw*0.76,height:bh,rx:3,fill:i<3?C.warn:(plState.player==="opp"?C.opp:C.you),opacity:.85}));});
-  svg.appendChild(T(P.l,H-8,"◀ near net (short)",{class:"axlab"}));svg.appendChild(T(W-P.r,H-8,"deep ▶",{"text-anchor":"end",class:"axlab"}));
-  box.appendChild(svg);
-}
-
 /* ============ WINNERS & ERRORS ============ */
 function renderWE(){groupedBars("we-err","errors_by_stroke",["Serve","Forehand","Backhand","Volley","Overhead"]);groupedBars("we-win","winners_by_stroke",["Forehand","Backhand","Volley","Overhead"]);drawRatio();drawNetType();drawDirBars();}
 function groupedBars(id,key,order){
@@ -861,9 +836,7 @@ function renderPatterns(){
     ["Serve quality",q.you.serve_q,q.you.serve_q>=q.opp.serve_q?"good":"warn","opp "+q.opp.serve_q],
     ["Expected winners",q.you.expected_winners,"warn","vs "+q.you.actual_winners+" tracked"]]);
   document.getElementById("pt-s1-title").textContent=`${M.meta.tracked}'s serve +1 patterns`;
-  document.getElementById("pt-fh-title").textContent=`${M.meta.tracked}'s forehand direction`;
-  document.getElementById("pt-bh-title").textContent=`${M.meta.tracked}'s backhand direction`;
-  drawServePlus1(p.serve_plus_one);drawQualityCompare();drawTendency("pt-fh",p.tendency.Forehand,C.you);drawTendency("pt-bh",p.tendency.Backhand,C.you);drawOpenings();
+  drawServePlus1(p.serve_plus_one);drawQualityCompare();drawOpenings();
 }
 function drawServePlus1(rows){
   const box=clear("pt-serveplus1");if(!rows.length){box.innerHTML='<p class="hint">Not enough serve+1 data.</p>';return;}
@@ -883,19 +856,142 @@ function drawQualityCompare(){
     [["you",0],["opp",1]].forEach(([k,o])=>{const v=q[k][key],bwv=bw*v/100;svg.appendChild(el("rect",{x:lx,y:y+o*17+2,width:Math.max(3,bwv),height:15,rx:3,fill:colOf(k),opacity:.9}));svg.appendChild(T(lx+bwv+5,y+o*17+14,v,{fill:colOf(k),"font-size":11,"font-weight":700}));});});
   box.appendChild(svg);legendInto(box,[[disp("you"),C.you],[disp("opp"),C.opp]]);
 }
-function drawTendency(id,rows,col){
-  const box=clear(id);if(!rows||!rows.length){box.innerHTML='<p class="hint">No data.</p>';return;}
-  rows=rows.slice(0,6);const W=box.clientWidth||460,rh=32,H=rows.length*rh+8,lx=96,bw=W-lx-46,mx=Math.max(...rows.map(r=>r.pct));
-  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:H});
-  rows.forEach((r,i)=>{const y=i*rh+6;svg.appendChild(T(0,y+17,r.dir,{fill:C.ink2,"font-size":12}));svg.appendChild(el("rect",{x:lx,y:y+4,width:Math.max(3,bw*r.pct/mx),height:17,rx:4,fill:col,opacity:.85}));svg.appendChild(T(lx+bw*r.pct/mx+6,y+17,r.pct+"% ("+r.n+")",{fill:col,"font-size":11,"font-weight":700}));});
-  box.appendChild(svg);
-}
 function drawOpenings(){
   const box=clear("pt-openings"),rows=M.patterns2.top_openings;
   const W=box.clientWidth||1040,rh=34,H=rows.length*rh+8,lx=40,bw=W-lx-320,mx=Math.max(...rows.map(r=>r.n));
   const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:H});
   rows.forEach((r,i)=>{const y=i*rh+6;svg.appendChild(el("rect",{x:lx,y:y+4,width:Math.max(3,bw*r.n/mx),height:18,rx:4,fill:C.you,opacity:.75}));svg.appendChild(T(lx+6,y+18,r.n+"×",{fill:"#fff","font-size":11,"font-weight":700}));svg.appendChild(T(lx+bw+12,y+18,r.seq,{fill:C.ink2,"font-size":12.5}));});
   box.appendChild(svg);
+}
+
+/* ============ TARGETING ============ */
+let tgState={player:"you",hand:{you:"R",opp:"R"},map:"zones"};
+function renderTargeting(){
+  const seg=clear("tg-player");["you","opp"].forEach(k=>{const b=mk("button",(k===tgState.player?"on ":"")+(k==="you"?"you":"opp"),disp(k));b.dataset.x=k;b.onclick=()=>{tgState.player=k;renderTargeting();};seg.appendChild(b);});
+  const recv=otherK(tgState.player);
+  document.getElementById("tg-hand-lbl").textContent=disp(recv)+"'s hand";
+  const hs=clear("tg-hand");[["R","Right"],["L","Left"]].forEach(([v,l])=>{const b=mk("button",tgState.hand[recv]===v?"on":"",l);b.dataset.x=v;b.onclick=()=>{tgState.hand[recv]=v;renderTargeting();};hs.appendChild(b);});
+  segSet("tg-map-mode",tgState.map);segBind("tg-map-mode",v=>{tgState.map=v;drawTargetMap();});
+  document.getElementById("tg-map-title").textContent=`Placement map — ${disp(tgState.player)} → ${disp(recv)}`;
+  document.getElementById("tg-break-title").textContent=`${disp(tgState.player)}'s shot selection by wing`;
+  const n1=document.getElementById("tg-name1");if(n1)n1.textContent=disp(tgState.player);
+  drawTargetMap();drawTargetBreakdown();drawTargetShift();
+}
+function drawTargetMap(){
+  const box=clear("tg-map"),tg=M.targeting[tgState.player],recv=otherK(tgState.player),hand=tgState.hand[recv],col=colOf(tgState.player);
+  const W=440,H=452,padX=26,padTop=88,padBot=32; // top room for figure + labels + "long" out-band
+  const worldW=DBL*2,worldH=BASE-NET; // one half-court, net→baseline
+  const sc=Math.min((W-2*padX)/worldW,(H-padTop-padBot)/worldH);
+  const cW=worldW*sc,cH=worldH*sc,ox=W/2,oyTop=padTop; // opponent baseline at top, net at bottom
+  // View = you looking across the net at the opponent. Flip x so the opponent's OWN
+  // right/left match how you'd see them face-on: rx>0 (their right) draws on the left.
+  const X=rx=>ox-rx*sc;
+  const Yd=deep=>oyTop+cH*(1-deep);         // deep=1 their baseline(top), 0 net(bottom)
+  const RX=[X(-DBL),X(DBL)],xMin=Math.min(RX[0],RX[1]),xMax=Math.max(RX[0],RX[1]);
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:"auto"});svg.style.maxHeight="450px";
+  // court surface
+  svg.appendChild(el("rect",{x:xMin,y:oyTop,width:cW,height:cH,fill:"#12293e",rx:4}));
+  const zones=tgState.map==="zones";
+  if(zones){ // zone shading (3 lateral bands × 3 depth bands), from live grid
+    const colE=[-DBL,-SGL/3,SGL/3,DBL],depE=[1,0.66,0.33,0];
+    const maxp=Math.max(1,...tg.grid.flat().map(z=>z.pct));
+    for(let r=0;r<3;r++)for(let c=0;c<3;c++){const z=tg.grid[r][c];
+      const xa=X(colE[c]),xb=X(colE[c+1]),y0=Yd(depE[r]),y1=Yd(depE[r+1]),x0=Math.min(xa,xb);
+      svg.appendChild(el("rect",{x:x0,y:y0,width:Math.abs(xb-xa),height:y1-y0,fill:col,"fill-opacity":(0.06+0.8*(z.pct/maxp)).toFixed(3)}));
+      if(z.pct>=2){svg.appendChild(T((xa+xb)/2,(y0+y1)/2-1,z.pct+"%",{"text-anchor":"middle",fill:"#fff","font-size":15,"font-weight":800}));
+        svg.appendChild(T((xa+xb)/2,(y0+y1)/2+13,z.n,{"text-anchor":"middle",fill:"rgba(255,255,255,.6)","font-size":9.5}));}}
+  }
+  // court lines
+  const L=(a,b,c,d,st={})=>svg.appendChild(el("line",Object.assign({x1:X(a),y1:Yd(b),x2:X(c),y2:Yd(d),stroke:"rgba(220,235,255,.5)","stroke-width":1.1},st)));
+  const svcDeep=6.4/(BASE-NET);
+  L(-DBL,1,DBL,1);L(-SGL,1,-SGL,0);L(SGL,1,SGL,0);L(-DBL,1,-DBL,0);L(DBL,1,DBL,0);
+  L(-SGL,svcDeep,SGL,svcDeep);L(0,svcDeep,0,0);
+  L(-0.35,1,0.35,1,{stroke:"rgba(220,235,255,.7)"});
+  svg.appendChild(el("line",{x1:xMin,y1:Yd(0),x2:xMax,y2:Yd(0),stroke:"#fff","stroke-width":2.4})); // net
+  // opponent figure + wing labels (drawn first so dots sit on top)
+  drawOppFigure(svg,ox,20,hand,recv);
+  const fhX=hand==="R"?X(SGL*0.62):X(-SGL*0.62),bhX=hand==="R"?X(-SGL*0.62):X(SGL*0.62);
+  svg.appendChild(T(fhX,52,`${disp(recv)} forehand`,{"text-anchor":"middle",fill:TGC.fh,"font-size":11.5,"font-weight":700}));
+  svg.appendChild(T(bhX,52,`${disp(recv)} backhand`,{"text-anchor":"middle",fill:TGC.bh,"font-size":11.5,"font-weight":700}));
+  // outcome dots. Winners land IN the court. Errors are placed by their MEASURED result,
+  // NOT the raw bounce coord: a net ball's recorded "bounce" is a phantom point mid-court,
+  // so we show net errors at the net, long balls past the baseline, wide balls past the sideline.
+  let bottomCap=`top = ${disp(recv)}'s baseline (deep) · bottom = net (you hit from below)`;
+  if(!zones){
+    const isErr=tgState.map==="error",cc=isErr?C.bad:C.good;
+    const dots=M.trajectories.filter(t=>t.player===tgState.player&&(t.stroke==="Forehand"||t.stroke==="Backhand")&&t.outcome===tgState.map&&typeof t.bx==="number"&&typeof t.by==="number");
+    let nNet=0,nLong=0,nWide=0,nIn=0;
+    dots.forEach(t=>{
+      const far=t.by>NET,rx=far?-t.bx:t.bx,deep=(far?(t.by-NET):(NET-t.by))/(BASE-NET),lat=Math.abs(t.bx);
+      let cx,cy,why;
+      if(isErr&&t.result==="Net"){nNet++;why="into the net";cx=clip(X(rx),xMin+6,xMax-6);cy=Yd(0)+9;}
+      else if(isErr&&deep>1.0){nLong++;why="long — past the baseline";cx=clip(X(rx),xMin+6,xMax-6);cy=oyTop-9;}
+      else if(isErr&&lat>SGL){nWide++;why="wide — past the sideline";cx=(X(rx)<ox?xMin-9:xMax+9);cy=clip(Yd(clip(deep,0,1)),oyTop+8,oyTop+cH-8);}
+      else{nIn++;why=isErr?"landed in the court":"winner";cx=clip(X(rx),xMin+4,xMax-4);cy=clip(Yd(clip(deep,0,1)),oyTop+4,oyTop+cH-4);}
+      const c=el("circle",{cx,cy,r:3.8,fill:cc,"fill-opacity":.6,stroke:cc,"stroke-width":1});c.style.cursor="pointer";
+      c.addEventListener("mousemove",e=>tip(`<b>${disp(t.player)} ${t.stroke}${isErr?" error":""}</b><br><span class="mut">${isErr?why+" · ":""}${t.dir} · ${t.spd}mph</span>`,e.clientX,e.clientY));c.addEventListener("mouseleave",untip);svg.appendChild(c);
+    });
+    bottomCap=isErr?`${nNet} into the net (shown at net) · ${nLong} long · ${nWide} wide${nIn?` · ${nIn} in-court`:""}`:`${dots.length} winners — where they landed`;
+  }
+  svg.appendChild(T(ox,H-9,bottomCap,{"text-anchor":"middle",fill:C.muted,"font-size":10}));
+  box.appendChild(svg);
+}
+function drawOppFigure(svg,cx,cy,hand,recv){
+  const s="rgba(220,235,255,.7)";
+  svg.appendChild(el("circle",{cx,cy,r:6,fill:"rgba(220,235,255,.14)",stroke:s,"stroke-width":1.5})); // head
+  svg.appendChild(el("line",{x1:cx,y1:cy+6,x2:cx,y2:cy+18,stroke:s,"stroke-width":1.5}));               // spine
+  svg.appendChild(el("path",{d:`M ${cx-9} ${cy+20} Q ${cx} ${cy+9} ${cx+9} ${cy+20}`,fill:"none",stroke:s,"stroke-width":1.5})); // shoulders
+  // racket arm on the opponent's forehand side (their right = your left when RH, so x = cx- for RH)
+  const dir=hand==="R"?-1:1,ax=cx+dir*8,ay=cy+11,tx=cx+dir*17,ty=cy+7;
+  svg.appendChild(el("line",{x1:ax,y1:ay,x2:tx,y2:ty,stroke:s,"stroke-width":1.4}));
+  svg.appendChild(el("ellipse",{cx:tx+dir*2,cy:ty-2,rx:3.2,ry:4.4,fill:"none",stroke:s,"stroke-width":1.3}));
+  svg.appendChild(T(cx,cy-11,`${disp(recv)} — facing you`,{"text-anchor":"middle",fill:C.muted,"font-size":10}));
+}
+function drawTargetBreakdown(){
+  const box=clear("tg-break"),tg=M.targeting[tgState.player],recv=otherK(tgState.player),hand=tgState.hand[recv],col=colOf(tgState.player);
+  const W=box.clientWidth||460,lx=116,bw=W-lx-94,you=disp(tgState.player);
+  const sub=(t)=>mk("div",null,`<div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin:6px 0 6px">${t}</div>`);
+  const barChart=(rows,h)=>{const H=rows.length*h+6,svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:H}),mx=Math.max(...rows.map(r=>r[1]),1);
+    rows.forEach((r,i)=>{const y=i*h+4;svg.appendChild(T(0,y+h/2+4,r[0],{fill:C.ink2,"font-size":12}));svg.appendChild(el("rect",{x:lx,y:y+3,width:Math.max(3,bw*r[1]/mx),height:h-8,rx:4,fill:r[2],opacity:.9}));svg.appendChild(T(lx+bw*r[1]/mx+6,y+h/2+4,r[1]+"%"+(r[3]!=null?` (${r[3]})`:""),{fill:r[2],"font-size":11,"font-weight":700}));});return svg;};
+  const tend=M.patterns2[tgState.player].tendency;
+  [["Forehand",tend.Forehand],["Backhand",tend.Backhand]].forEach(([stroke,rows])=>{
+    box.appendChild(sub(`${you}'s ${stroke.toLowerCase()} — where it goes`));
+    if(!rows||!rows.length){box.appendChild(mk("p","hint",`No ${stroke.toLowerCase()} data.`));return;}
+    box.appendChild(barChart(rows.slice(0,5).map(r=>[r.dir,r.pct,col,r.n]),27));
+  });
+  box.appendChild(sub("Depth it lands"));
+  box.appendChild(barChart([["Deep",tg.depth.deep_pct,col],["Mid",tg.depth.mid_pct,col],["Short",tg.depth.short_pct,col]],26));
+  box.appendChild(mk("p","method","Direction terms are relative to the hitter: cross-court = diagonal · down the line = straight down that side · inside-out = a run-around forehand sent cross-court · inside-in = a run-around forehand sent down the line."));
+}
+function drawTargetShift(){
+  const box=clear("tg-shift"),tg=M.targeting[tgState.player],recv=otherK(tgState.player),hand=tgState.hand[recv],labs=M.targeting.segment_labels;
+  const names=["Early","Middle","Late"],W=box.clientWidth||1000,rowH=56,H=tg.segments.length*rowH+18,lx=118,bw=W-lx-150;
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:H});
+  tg.segments.forEach((s,i)=>{const y=i*rowH+8,lab=labs[i];
+    svg.appendChild(T(0,y+20,names[i],{fill:C.ink,"font-size":13,"font-weight":700}));
+    svg.appendChild(T(0,y+35,`pts ${lab.from}–${lab.to}`,{fill:C.muted,"font-size":10.5}));
+    const bhP=hand==="R"?s.left_pct:s.right_pct,fhP=hand==="R"?s.right_pct:s.left_pct;
+    let x=lx;[["BH",bhP,TGC.bh],["Mid",s.middle_pct,TGC.mid],["FH",fhP,TGC.fh]].forEach(([lbl,p,cc])=>{const wpx=bw*p/100;if(wpx>0){svg.appendChild(el("rect",{x,y:y+8,width:Math.max(0,wpx-1),height:28,rx:4,fill:cc,opacity:.92}));if(p>=9)svg.appendChild(T(x+wpx/2,y+26,p+"%",{"text-anchor":"middle",fill:"#08121f","font-size":11.5,"font-weight":800}));}x+=wpx;});
+    svg.appendChild(T(lx+bw+10,y+26,`${s.deep_pct}% deep`,{fill:C.muted,"font-size":11.5}));});
+  box.appendChild(svg);legendInto(box,[["Backhand side",TGC.bh],["Middle",TGC.mid],["Forehand side",TGC.fh]]);
+  document.getElementById("tg-insight").innerHTML=targetNarrative();
+}
+function targetNarrative(){
+  const tg=M.targeting[tgState.player],recv=otherK(tgState.player),hand=tgState.hand[recv],you=disp(tgState.player),opp=disp(recv);
+  const s=tg.segments,labs=M.targeting.segment_labels;
+  const bh=x=>hand==="R"?x.left_pct:x.right_pct,fh=x=>hand==="R"?x.right_pct:x.left_pct;
+  const e=s[0],l=s[2],dBH=bh(l)-bh(e),dDeep=l.deep_pct-e.deep_pct;
+  const favFH=(hand==="R"?tg.side.right_pct:tg.side.left_pct)>=50;
+  const favSide=favFH?"forehand":"backhand",favPct=favFH?(hand==="R"?tg.side.right_pct:tg.side.left_pct):(hand==="R"?tg.side.left_pct:tg.side.right_pct);
+  const topDir=tg.directions[0];
+  let shift;
+  if(Math.abs(dBH)>=8){
+    shift=`Early on (points ${labs[0].from}–${labs[0].to}) ${you} went at ${opp}'s <b>backhand ${bh(e)}%</b> of the time; by the closing stretch (${labs[2].from}–${labs[2].to}) that ${dBH<0?"fell":"climbed"} to <b>${bh(l)}%</b> — ${dBH<0?`opening up the forehand side (${fh(e)}%→${fh(l)}%)`:`leaning even harder on that wing`}. <span class="fix">A real, readable change of pattern.</span>`;
+  }else{
+    shift=`The side-to-side mix held steady — backhand ${bh(e)}%→${bh(l)}%, forehand ${fh(e)}%→${fh(l)}%. ${you} ran essentially the same targeting wire-to-wire.`;
+  }
+  const depthNote=Math.abs(dDeep)>=6?` Depth did move though: <b>${e.deep_pct}%→${l.deep_pct}%</b> landing deep late, ${dDeep>0?`pushing ${opp} further back`:`landing shorter and sitting up`}.`:"";
+  return `<b>Read:</b> Across the match ${you} favored ${opp}'s <b>${favSide} side (${favPct}%)</b> of side-to-side balls and most often went <b>${topDir?topDir.dir:"—"}</b>${topDir?` (${topDir.pct}%)`:""}, landing <b>${tg.depth.deep_pct}% deep</b>. ${shift}${depthNote}`;
 }
 
 /* ============ BRIEF + EXPORT ============ */
@@ -919,7 +1015,7 @@ function renderFoot(){const r=M.reconstruction;document.getElementById("foot").i
 /* ============ 3D COURT ENGINE ============ */
 const cam={yaw:-0.42,pitch:0.74,scale:36,dist:30,f:22,cx:0,cy:0};
 const clip=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
-let c3state={color:"outcome",shot:"all",orbit:true,mode:"explore"};
+let c3state={color:"player",shot:"all",orbit:true,mode:"replay"};
 let c3init=false,c3ctx=null,c3canvas=null;
 let byPoint={},pointIds=[],scoreByPt={};
 let c3resize=null,rsState={wonby:"all",ending:"all",open:false};
@@ -927,14 +1023,16 @@ const replay={idx:0,shot:0,u:0,playing:true,speed:0.9,_hold:0};
 function groupTraj(){const m={};M.trajectories.forEach(t=>{(m[t.pt]=m[t.pt]||[]).push(t);});for(const k in m)m[k].sort((a,b)=>a.i-b.i);return m;}
 function currentPid(){return pointIds[replay.idx];}
 function ensure3D(){if(c3init)return;c3init=true;setup3D();}
-function jumpToReplay(pid){const idx=pointIds.indexOf(pid);if(idx<0)return;document.querySelectorAll(".tab").forEach(t=>t.classList.remove("on"));document.querySelector('.tab[data-view="court3d"]').classList.add("on");document.querySelectorAll("section.view").forEach(s=>s.classList.toggle("on",s.dataset.v==="court3d"));ensure3D();setTimeout(()=>{document.querySelector('#c3-mode button[data-x="replay"]').click();replay.idx=idx;replay.shot=0;replay.u=0;replay.playing=true;setPlay();updateRepLabel();syncReplaySide();window.scrollTo({top:0,behavior:"smooth"});},40);}
+function jumpToReplay(pid){const idx=pointIds.indexOf(pid);if(idx<0)return;document.querySelectorAll(".tab").forEach(t=>t.classList.remove("on"));document.querySelector('.tab[data-view="court3d"]').classList.add("on");document.querySelectorAll("section.view").forEach(s=>s.classList.toggle("on",s.dataset.v==="court3d"));ensure3D();setTimeout(()=>{replay.idx=idx;replay.shot=0;replay.u=0;replay.playing=true;setPlay();setReplayPanel(true);updateRepLabel();syncReplaySide();window.scrollTo({top:0,behavior:"smooth"});},40);}
 function setup3D(){
   c3canvas=document.getElementById("court3d");const wrap=c3canvas.parentElement;
   function size(){const w=wrap.clientWidth;c3canvas.width=w*devicePixelRatio;c3canvas.height=580*devicePixelRatio;c3canvas.style.height="580px";c3ctx=c3canvas.getContext("2d");c3ctx.scale(devicePixelRatio,devicePixelRatio);cam.cx=w/2;cam.cy=340;}
   c3resize=size;size();window.addEventListener("resize",()=>{if(document.querySelector('[data-v="court3d"]').classList.contains("on"))size();});
-  segBind("c3-color",v=>{c3state.color=v;buildLegend();});segBind("c3-shot",v=>{c3state.shot=v;});
   document.querySelectorAll("#c3-orbit button").forEach(b=>{b.onclick=()=>{if(b.dataset.x==="orbit"){c3state.orbit=!c3state.orbit;b.classList.toggle("on",c3state.orbit);}else{cam.yaw=-0.42;cam.pitch=0.74;cam.scale=36;}};});
-  segBind("c3-mode",v=>{c3state.mode=v;const on=v==="replay";document.getElementById("c3-rep").style.display=on?"flex":"none";document.getElementById("rp-shot").style.display=on?"block":"none";if(on){replay.shot=0;replay.u=0;replay.playing=true;setPlay();updateRepLabel();}document.getElementById("c3-note").innerHTML=on?"Space play/pause · ←/→ change rally · click a point to jump":"drag to rotate · scroll to zoom";setReplayPanel(on);});
+  // replay is the only mode now — initialise its UI once
+  document.getElementById("rp-shot").style.display="block";
+  document.getElementById("c3-note").innerHTML="Space play/pause · ←/→ change rally · click a point to jump";
+  replay.shot=0;replay.u=0;replay.playing=true;setPlay();updateRepLabel();setReplayPanel(true);
   document.getElementById("rp-prev").onclick=()=>gotoPointIdx(replay.idx-1);
   document.getElementById("rp-next").onclick=()=>gotoPointIdx(replay.idx+1);
   document.getElementById("rp-play").onclick=()=>{replay.playing=!replay.playing;setPlay();};
@@ -1001,7 +1099,7 @@ function render3D(){
   const L=(a,b)=>{const p=project(a[0],a[1],a[2]||0),q=project(b[0],b[1],b[2]||0);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();};
   L([-DBL,0],[DBL,0]);L([-DBL,BASE],[DBL,BASE]);L([-DBL,0],[-DBL,BASE]);L([DBL,0],[DBL,BASE]);L([-SGL,0],[-SGL,BASE]);L([SGL,0],[SGL,BASE]);L([-SGL,NET-6.4],[SGL,NET-6.4]);L([-SGL,NET+6.4],[SGL,NET+6.4]);L([0,NET-6.4],[0,NET+6.4]);
   drawNet(ctx);
-  if(c3state.mode==="replay"){renderReplay(ctx);document.getElementById("c3-hud").innerHTML=`rally replay<br>yaw ${(cam.yaw%6.283).toFixed(2)} · pitch ${cam.pitch.toFixed(2)}`;return;}
+  if(c3state.mode==="replay"){renderReplay(ctx);document.getElementById("c3-hud").innerHTML="";return;}
   const arcs=filteredTraj().map(buildArcPts);arcs.sort((a,b)=>b.depth-a.depth);
   const dmin=Math.min(...arcs.map(a=>a.depth)),dmax=Math.max(...arcs.map(a=>a.depth));const near=a=>dmax>dmin?(dmax-a.depth)/(dmax-dmin):1;const dimRally=c3state.color==="outcome";
   for(const a of arcs){const isRally=a.t.outcome==="rally",df=0.45+0.55*near(a);ctx.beginPath();a.pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.lineCap="round";ctx.strokeStyle=a.color;ctx.globalAlpha=(isRally?(dimRally?0.14:0.4):0.66)*df;ctx.lineWidth=a.t.stroke==="Serve"?1.9:isRally?0.85:1.35;ctx.stroke();}
@@ -1016,7 +1114,7 @@ function renderReplay(ctx){
     const resc=cur.result==="In"?C.good:C.bad;document.getElementById("rp-shot").innerHTML=`<b style="color:${colOf(cur.player)}">${disp(cur.player)} · ${cur.stroke}</b> <span style="color:${C.muted}">(shot ${replay.shot+1}/${shots.length})</span><br>${cur.spin} · ${cur.dir} · <b>${cur.spd} mph</b> · <span style="color:${resc}">${cur.result}</span>`+(replay.shot===shots.length-1&&replay.u>=0.98?`<br><span style="color:${cur.outcome==="winner"?C.good:C.bad}">▸ ${cur.outcome==="winner"?"Winner":cur.outcome==="error"?"Error — point ends":"end"}</span>`:``);}
   ctx.globalAlpha=1;
 }
-function buildLegend(){const box=document.getElementById("c3-legend");if(!box)return;box.innerHTML="";let items;if(c3state.color==="outcome")items=[["Winner",C.good],["Error",C.bad],["Rally ball",C.rally]];else if(c3state.color==="player")items=[[disp("you"),C.you],[disp("opp"),C.opp]];else items=Object.entries(SPINC);items.forEach(([lab,col])=>{const d=mk("div","it");d.innerHTML=`<span class="sw rd" style="background:${col}"></span>${lab}`;box.appendChild(d);});const note=mk("div","it");note.innerHTML=`<span style="color:${C.muted}">thicker arc = serve · dot = bounce</span>`;box.appendChild(note);}
+function buildLegend(){const box=document.getElementById("c3-legend");if(!box)return;box.innerHTML="";[[disp("you"),C.you],[disp("opp"),C.opp]].forEach(([lab,col])=>{const d=mk("div","it");d.innerHTML=`<span class="sw rd" style="background:${col}"></span>${lab}`;box.appendChild(d);});const note=mk("div","it");note.innerHTML=`<span style="color:${C.muted}">bright dot = current ball · thicker arc = serve · dot = bounce</span>`;box.appendChild(note);}
 
 /* ============ BOOT ============ */
 loadModel(window.SAMPLE_RAW);

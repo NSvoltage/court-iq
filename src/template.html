@@ -95,6 +95,50 @@ canvas{display:block;width:100%;touch-action:none}
 .drop .box{border:2px dashed var(--accent);border-radius:20px;padding:60px 80px;text-align:center;color:var(--ink);font-size:18px;font-weight:700}
 .foot{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:11.5px;line-height:1.6}
 .foot b{color:var(--ink2)}
+/* point log */
+.plog{width:100%;overflow-x:auto}
+.plog-head,.prow{display:grid;grid-template-columns:132px 92px minmax(140px,1fr) 200px 108px 74px;gap:12px;align-items:center;min-width:780px}
+.plog-head{padding:12px 18px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+.prow{padding:11px 18px;border-top:1px solid var(--line);font-size:13px;cursor:pointer;transition:background .12s}
+.prow:hover{background:var(--panel2)}
+.prow.dead{cursor:default}.prow.dead:hover{background:transparent}
+.prow .pn{font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.prow .psc{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:1px}
+.pdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle;flex:none}
+.prally{display:flex;align-items:center;gap:9px}
+.pbar{height:8px;border-radius:5px;background:var(--panel2);flex:1;min-width:52px;overflow:hidden}
+.pbar>span{display:block;height:100%;border-radius:5px}
+.prally b{font-variant-numeric:tabular-nums;color:var(--ink);min-width:34px}
+.pend{font-weight:650}.pend.win{color:var(--good)}.pend.err{color:var(--bad)}
+.estchip{display:inline-block;font-size:8.5px;letter-spacing:.05em;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:1px 4px;margin-left:7px;vertical-align:middle;text-transform:uppercase;font-weight:700}
+.preplay{appearance:none;border:1px solid var(--line);background:var(--panel2);color:var(--ink2);font-family:inherit;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;transition:.12s}
+.prow:hover .preplay{border-color:var(--accent);color:#fff}
+.pnone{padding:26px 18px;color:var(--muted);font-size:13px}
+/* replay + docked point panel */
+.replay-layout{display:flex;gap:14px;align-items:flex-start}
+.replay-layout .canvas-wrap{flex:1;min-width:0}
+.replay-side{display:none;flex-direction:column;width:308px;flex:none;background:var(--panel);border:1px solid var(--line);border-radius:16px;max-height:580px;overflow:hidden}
+.replay-side.show{display:flex}
+.rs-head{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.rs-sm{font-size:20px;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums;line-height:1.1}
+.rs-ss{font-size:11px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
+.rs-close{appearance:none;border:1px solid var(--line);background:var(--panel2);color:var(--ink2);border-radius:8px;width:26px;height:26px;cursor:pointer;font-size:12px;flex:none;line-height:1}
+.rs-close:hover{border-color:var(--accent);color:#fff}
+.rs-filters{display:flex;gap:6px;padding:9px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.rs-filters .seg{padding:2px}.rs-filters .seg button{padding:4px 9px;font-size:11.5px}
+.rs-list{overflow-y:auto;flex:1;padding:6px}
+.psrow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:7px 9px;border-radius:9px;cursor:pointer;transition:background .1s}
+.psrow:hover{background:var(--panel2)}
+.psrow.on{background:rgba(57,135,229,.16);box-shadow:inset 0 0 0 1px var(--accent)}
+.psrow.dead{opacity:.45;cursor:default}.psrow.dead:hover{background:transparent}
+.ps-end{font-size:12.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ps-end.win{color:var(--good)}.ps-end.err{color:var(--bad)}
+.ps-sub{font-size:11px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ps-rally{font-size:15px;font-weight:800;color:var(--ink2);text-align:right;font-variant-numeric:tabular-nums}
+.ps-rally span{display:block;font-size:8.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+@media(max-width:820px){
+  .replay-side.show{position:fixed;top:0;right:0;bottom:0;width:min(340px,88vw);max-height:none;z-index:120;border-radius:0;box-shadow:-14px 0 44px rgba(0,0,0,.55)}
+}
 </style>
 
 <div class="app">
@@ -132,13 +176,44 @@ canvas{display:block;width:100%;touch-action:none}
         <label>Mode</label><div class="seg" id="c3-mode"><button data-x="explore" class="on">Explore all</button><button data-x="replay">▶ Rally replay</button></div>
         <div id="c3-rep" style="display:none;align-items:center;gap:8px;flex-wrap:wrap">
           <div class="seg"><button id="rp-prev">◀</button><button id="rp-play" class="on">⏸</button><button id="rp-next">▶</button></div>
+          <button class="loadbtn" id="rp-toggle" style="padding:7px 12px">☰ Points</button>
           <span id="rp-label" style="font-size:12.5px;color:var(--ink2)"></span>
         </div>
       </div>
-      <div class="canvas-wrap"><canvas id="court3d" height="580"></canvas><div class="hud" id="c3-hud"></div><div class="cnote" id="c3-note">drag to rotate · scroll to zoom</div>
-        <div id="rp-shot" style="position:absolute;top:12px;left:14px;font-size:12.5px;color:var(--ink);background:rgba(6,10,18,.72);border:1px solid var(--line);border-radius:9px;padding:8px 12px;display:none;line-height:1.5;max-width:280px"></div>
+      <div class="replay-layout" id="replay-layout">
+        <div class="canvas-wrap"><canvas id="court3d" height="580"></canvas><div class="hud" id="c3-hud"></div><div class="cnote" id="c3-note">drag to rotate · scroll to zoom</div>
+          <div id="rp-shot" style="position:absolute;top:12px;left:14px;font-size:12.5px;color:var(--ink);background:rgba(6,10,18,.72);border:1px solid var(--line);border-radius:9px;padding:8px 12px;display:none;line-height:1.5;max-width:280px"></div>
+        </div>
+        <aside class="replay-side" id="replay-side">
+          <div class="rs-head">
+            <div id="rs-score"><div class="rs-sm">—</div></div>
+            <button class="rs-close" id="rs-close" title="Hide points">✕</button>
+          </div>
+          <div class="rs-filters">
+            <div class="seg" id="rs-wonby"></div>
+            <div class="seg" id="rs-ending"><button data-x="all" class="on">All</button><button data-x="winner">Won</button><button data-x="error">Err</button></div>
+          </div>
+          <div class="rs-list" id="rs-list"></div>
+        </aside>
       </div>
       <div class="legend" id="c3-legend" style="margin-top:14px"></div>
+    </section>
+
+    <section class="view" data-v="points">
+      <h2 class="viewhead">Point-by-point log</h2>
+      <p class="viewsub">Every tracked point from start to finish — running score, who won it, how long the rally was, and the shot that ended it. <b style="color:var(--you)">Click any point to replay it in 3D.</b> Rally-mode exports have no scoreboard, so the score is a running tally of point winners.</p>
+      <div class="ctl">
+        <label>Won by</label><div class="seg" id="pt-wonby"></div>
+        <label>Ending</label><div class="seg" id="pt-ending"><button data-x="all" class="on">All</button><button data-x="winner">Winners</button><button data-x="error">Errors</button></div>
+      </div>
+      <div class="ctl" style="margin-bottom:12px">
+        <label>Final shot</label><div class="seg" id="pt-stroke"><button data-x="all" class="on">All</button><button data-x="Forehand">FH</button><button data-x="Backhand">BH</button><button data-x="Volley">Volley</button><button data-x="Overhead">Smash</button><button data-x="Serve">Serve</button></div>
+        <label>Sort</label><div class="seg" id="pt-sort"><button data-x="order" class="on">Match order</button><button data-x="long">Longest</button><button data-x="short">Shortest</button></div>
+      </div>
+      <div class="card p0">
+        <div class="plog" id="points-list"></div>
+      </div>
+      <p class="method" id="pt-count"></p>
     </section>
 
     <section class="view" data-v="serve">
@@ -286,7 +361,7 @@ function clear(id){const e=document.getElementById(id);e.innerHTML="";return e;}
 function segBind(id,fn){document.querySelectorAll("#"+id+" button").forEach(b=>{b.onclick=()=>{document.querySelectorAll("#"+id+" button").forEach(x=>x.classList.remove("on"));b.classList.add("on");fn(b.dataset.x);};});}
 
 /* ============ NAV + MODE ============ */
-const VIEWS=[["MATCH",[["overview","Overview"],["court3d","3D Court"],["serve","Serve"],["placement","Placement"],["we","Winners & Errors"],["rally","Rally"]]],
+const VIEWS=[["MATCH",[["overview","Overview"],["court3d","3D Court"],["points","Points"],["serve","Serve"],["placement","Placement"],["we","Winners & Errors"],["rally","Rally"]]],
   ["PLAYER",[["movement","Movement"],["positioning","Positioning"],["reliability","Reliability"]]],
   ["ANALYTICS",[["patterns","Patterns & Quality"]]],
   ["COACH",[["brief","Brief"]]]];
@@ -301,16 +376,17 @@ document.querySelectorAll("#modetoggle button").forEach(b=>b.onclick=()=>setMode
 function loadModel(rawSheets){
   M=SVEngine3.build(rawSheets);
   byPoint=groupTraj(); pointIds=Object.keys(byPoint).map(Number).sort((a,b)=>a-b);
+  scoreByPt=buildScore();
   replay.idx=Math.max(0,pointIds.findIndex(p=>byPoint[p].length>=8&&byPoint[p].length<=14));replay.shot=0;replay.u=0;
   renderAll();
 }
 function renderAll(){
   document.getElementById("matchtag").innerHTML=`<b>${M.meta.tracked}</b> vs <b>${M.meta.opp}</b> · ${M.match.total_points} pts · ${M.meta.start_time||""}`;
-  renderOverview();renderServe();renderPlacement();renderWE();renderRally();
+  renderOverview();renderPoints();renderServe();renderPlacement();renderWE();renderRally();
   renderMovement();renderPositioning();renderReliability();renderPatterns();renderBrief();renderFoot();
   if(c3init){buildLegend();} // 3D redraws from live M each frame
 }
-function loadInto(m){M=m;byPoint=groupTraj();pointIds=Object.keys(byPoint).map(Number).sort((a,b)=>a-b);replay.idx=Math.max(0,pointIds.findIndex(p=>byPoint[p].length>=8&&byPoint[p].length<=14));replay.shot=0;replay.u=0;renderAll();}
+function loadInto(m){M=m;byPoint=groupTraj();pointIds=Object.keys(byPoint).map(Number).sort((a,b)=>a-b);scoreByPt=buildScore();replay.idx=Math.max(0,pointIds.findIndex(p=>byPoint[p].length>=8&&byPoint[p].length<=14));replay.shot=0;replay.u=0;renderAll();}
 function handleFiles(fileList){
   const files=Array.from(fileList||[]); if(!files.length)return;
   let done=0,lastM=null,ok=0,fail=0;
@@ -459,6 +535,101 @@ function drawMomentum(){
   svg.appendChild(hit);
   svg.appendChild(T(P.l,H-8,"Point 1",{class:"axlab"}));svg.appendChild(T(W-P.r,H-8,"Point "+n,{"text-anchor":"end",class:"axlab"}));
   box.appendChild(svg);
+}
+
+/* ============ POINT-BY-POINT LOG ============ */
+let ptState={wonby:"all",ending:"all",stroke:"all",sort:"order"};
+const STROKE_LABEL={Overhead:"Smash",Serve:"Serve",Forehand:"Forehand",Backhand:"Backhand",Volley:"Volley"};
+function finalShot(p){
+  const s=STROKE_LABEL[p.last_stroke]||p.last_stroke||"Shot";
+  if(p.reason==="winner"){
+    if(p.last_stroke==="Serve")return{txt:p.n_shots<=1?"Ace":"Service winner",tone:"win"};
+    return{txt:s+" winner",tone:"win"};
+  }
+  if(p.last_stroke==="Serve")return{txt:"Serve fault"+(p.last_result==="Net"?" (net)":p.last_result==="Out"?" (long)":""),tone:"err"};
+  const how=p.last_result==="Net"?"into net":p.last_result==="Out"?"out":(p.last_result?String(p.last_result).toLowerCase():"error");
+  return{txt:s+" "+how,tone:"err"};
+}
+function segSet(id,val){document.querySelectorAll("#"+id+" button").forEach(b=>b.classList.toggle("on",b.dataset.x===val));}
+function renderPoints(){
+  ptState={wonby:"all",ending:"all",stroke:"all",sort:"order"};
+  const seg=clear("pt-wonby");
+  [["all","All"],["you",disp("you")],["opp",disp("opp")]].forEach(([k,lab])=>{
+    const b=mk("button",(k===ptState.wonby?"on ":"")+(k==="you"?"you":k==="opp"?"opp":""),lab);
+    b.dataset.x=k;b.onclick=()=>{ptState.wonby=k;segSet("pt-wonby",k);drawPointsList();};seg.appendChild(b);
+  });
+  segSet("pt-ending","all");segSet("pt-stroke","all");segSet("pt-sort","order");
+  segBind("pt-ending",v=>{ptState.ending=v;drawPointsList();});
+  segBind("pt-stroke",v=>{ptState.stroke=v;drawPointsList();});
+  segBind("pt-sort",v=>{ptState.sort=v;drawPointsList();});
+  drawPointsList();
+}
+/* Reconstruct a running tennis score from the point-winner sequence.
+   Rally-mode exports carry no scoreboard, so this walks points in order,
+   scoring standard games (first to 4, win by 2), sets (6, win by 2, TB at 6-6),
+   and also keeps a raw points tally. Keyed by point id; state is AFTER each point. */
+function buildScore(){
+  const P=["0","15","30","40"],out={};
+  let sets={you:0,opp:0},games={you:0,opp:0},gp={you:0,opp:0},tally={you:0,opp:0},tb=false,seq=0;
+  const gd=()=>{
+    if(tb)return gp.you+"-"+gp.opp;
+    if(gp.you>=3&&gp.opp>=3)return gp.you===gp.opp?"40-40":(gp.you>gp.opp?"Ad "+disp("you"):"Ad "+disp("opp"));
+    return P[Math.min(3,gp.you)]+"-"+P[Math.min(3,gp.opp)];
+  };
+  M.points.forEach(p=>{
+    seq++;const w=p.winner,l=w==="you"?"opp":"you";tally[w]++;gp[w]++;
+    let wonGame=false,wonSet=false;
+    if(tb){if(gp[w]>=7&&gp[w]-gp[l]>=2){games[w]++;gp={you:0,opp:0};tb=false;wonGame=true;}}
+    else if(gp[w]>=4&&gp[w]-gp[l]>=2){games[w]++;gp={you:0,opp:0};wonGame=true;}
+    if(games.you===6&&games.opp===6)tb=true;
+    if(!tb){
+      const sw=(games.you>=6&&games.you-games.opp>=2)?"you":(games.opp>=6&&games.opp-games.you>=2)?"opp":(games.you===7&&games.opp<=6)?"you":(games.opp===7&&games.you<=6)?"opp":null;
+      if(sw){sets[sw]++;games={you:0,opp:0};wonSet=true;}
+    }
+    out[p.point]={seq,sets:{...sets},games:{...games},game:gd(),tally:{...tally},tb,wonGame,wonSet};
+  });
+  return out;
+}
+function scoreIndex(){if(!scoreByPt||!Object.keys(scoreByPt).length)scoreByPt=buildScore();return scoreByPt;}
+// per-row label for the log: game/set milestones read better than a reset "0-0"
+function rowScore(st){
+  if(!st)return{main:"",sub:""};
+  const setp=(st.sets.you||st.sets.opp)?`sets ${st.sets.you}-${st.sets.opp} · `:"";
+  const main=st.wonSet?`Set ${st.sets.you}-${st.sets.opp}`:st.wonGame?"Game":st.game;
+  return{main,sub:`${setp}${st.games.you}-${st.games.opp} gm · ${st.tally.you}–${st.tally.opp} pts`};
+}
+function drawPointsList(){
+  const box=clear("points-list");
+  const meta=scoreIndex();
+  const srcMap={};(M.reconstruction&&M.reconstruction.per_point||[]).forEach(x=>srcMap[x.pt]=x.source);
+  const maxRally=Math.max(1,M.match.longest_rally);
+  let arr=M.points.filter(p=>{
+    if(ptState.wonby!=="all"&&p.winner!==ptState.wonby)return false;
+    if(ptState.ending==="winner"&&p.reason!=="winner")return false;
+    if(ptState.ending==="error"&&p.reason!=="error")return false;
+    if(ptState.stroke!=="all"&&p.last_stroke!==ptState.stroke)return false;
+    return true;
+  });
+  if(ptState.sort==="long")arr=arr.slice().sort((a,b)=>b.n_shots-a.n_shots||meta[a.point].seq-meta[b.point].seq);
+  else if(ptState.sort==="short")arr=arr.slice().sort((a,b)=>a.n_shots-b.n_shots||meta[a.point].seq-meta[b.point].seq);
+  const head=mk("div","plog-head");head.innerHTML=`<span>Score</span><span>Server</span><span>Rally</span><span>Ended on</span><span>Won by</span><span></span>`;box.appendChild(head);
+  if(!arr.length){box.appendChild(mk("div","pnone","No points match these filters."));document.getElementById("pt-count").textContent="";return;}
+  arr.forEach(p=>{
+    const rs=rowScore(meta[p.point]),fs=finalShot(p),canReplay=pointIds.indexOf(p.point)>=0;
+    const est=(srcMap[p.point]==="winner_soft"||srcMap[p.point]==="imputed")?'<span class="estchip">est</span>':'';
+    const svr=p.server?`<span class="pdot" style="background:${colOf(p.server)}"></span>${disp(p.server)}`:'<span style="color:var(--muted)">—</span>';
+    const row=mk("div","prow"+(canReplay?"":" dead"));
+    row.innerHTML=`<div><div class="pn">${rs.main}</div><div class="psc">${rs.sub}</div></div>`+
+      `<div style="display:flex;align-items:center">${svr}</div>`+
+      `<div class="prally"><span class="pbar"><span style="width:${Math.round(100*p.n_shots/maxRally)}%;background:${colOf(p.winner)};opacity:.8"></span></span><b>${p.n_shots}</b></div>`+
+      `<div class="pend ${fs.tone}">${fs.txt}${est}</div>`+
+      `<div style="display:flex;align-items:center"><span class="pdot" style="background:${colOf(p.winner)}"></span>${disp(p.winner)}</div>`+
+      `<div style="text-align:right">${canReplay?'<button class="preplay">▶ Replay</button>':'<span style="color:var(--muted);font-size:11px">no track</span>'}</div>`;
+    if(canReplay)row.onclick=()=>jumpToReplay(p.point);
+    box.appendChild(row);
+  });
+  const w=arr.filter(p=>p.reason==="winner").length,e=arr.length-w;
+  document.getElementById("pt-count").textContent=`Showing ${arr.length} of ${M.points.length} tracked points · ${w} ended on a winner, ${e} on an error. Score is a reconstructed tennis scoreboard (no scoreboard is stored in rally-mode exports); "est" marks points whose ending was reconstructed from shot quality rather than a measured miss.`;
 }
 
 /* ============ 2D COURT (top-down helper) ============ */
@@ -750,22 +921,25 @@ const cam={yaw:-0.42,pitch:0.74,scale:36,dist:30,f:22,cx:0,cy:0};
 const clip=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
 let c3state={color:"outcome",shot:"all",orbit:true,mode:"explore"};
 let c3init=false,c3ctx=null,c3canvas=null;
-let byPoint={},pointIds=[];
+let byPoint={},pointIds=[],scoreByPt={};
+let c3resize=null,rsState={wonby:"all",ending:"all",open:false};
 const replay={idx:0,shot:0,u:0,playing:true,speed:0.9,_hold:0};
 function groupTraj(){const m={};M.trajectories.forEach(t=>{(m[t.pt]=m[t.pt]||[]).push(t);});for(const k in m)m[k].sort((a,b)=>a.i-b.i);return m;}
 function currentPid(){return pointIds[replay.idx];}
 function ensure3D(){if(c3init)return;c3init=true;setup3D();}
-function jumpToReplay(pid){const idx=pointIds.indexOf(pid);if(idx<0)return;document.querySelectorAll(".tab").forEach(t=>t.classList.remove("on"));document.querySelector('.tab[data-view="court3d"]').classList.add("on");document.querySelectorAll("section.view").forEach(s=>s.classList.toggle("on",s.dataset.v==="court3d"));ensure3D();setTimeout(()=>{document.querySelector('#c3-mode button[data-x="replay"]').click();replay.idx=idx;replay.shot=0;replay.u=0;replay.playing=true;setPlay();updateRepLabel();window.scrollTo({top:0,behavior:"smooth"});},40);}
+function jumpToReplay(pid){const idx=pointIds.indexOf(pid);if(idx<0)return;document.querySelectorAll(".tab").forEach(t=>t.classList.remove("on"));document.querySelector('.tab[data-view="court3d"]').classList.add("on");document.querySelectorAll("section.view").forEach(s=>s.classList.toggle("on",s.dataset.v==="court3d"));ensure3D();setTimeout(()=>{document.querySelector('#c3-mode button[data-x="replay"]').click();replay.idx=idx;replay.shot=0;replay.u=0;replay.playing=true;setPlay();updateRepLabel();syncReplaySide();window.scrollTo({top:0,behavior:"smooth"});},40);}
 function setup3D(){
   c3canvas=document.getElementById("court3d");const wrap=c3canvas.parentElement;
   function size(){const w=wrap.clientWidth;c3canvas.width=w*devicePixelRatio;c3canvas.height=580*devicePixelRatio;c3canvas.style.height="580px";c3ctx=c3canvas.getContext("2d");c3ctx.scale(devicePixelRatio,devicePixelRatio);cam.cx=w/2;cam.cy=340;}
-  size();window.addEventListener("resize",()=>{if(document.querySelector('[data-v="court3d"]').classList.contains("on"))size();});
+  c3resize=size;size();window.addEventListener("resize",()=>{if(document.querySelector('[data-v="court3d"]').classList.contains("on"))size();});
   segBind("c3-color",v=>{c3state.color=v;buildLegend();});segBind("c3-shot",v=>{c3state.shot=v;});
   document.querySelectorAll("#c3-orbit button").forEach(b=>{b.onclick=()=>{if(b.dataset.x==="orbit"){c3state.orbit=!c3state.orbit;b.classList.toggle("on",c3state.orbit);}else{cam.yaw=-0.42;cam.pitch=0.74;cam.scale=36;}};});
-  segBind("c3-mode",v=>{c3state.mode=v;const on=v==="replay";document.getElementById("c3-rep").style.display=on?"flex":"none";document.getElementById("rp-shot").style.display=on?"block":"none";if(on){replay.shot=0;replay.u=0;replay.playing=true;setPlay();updateRepLabel();}document.getElementById("c3-note").innerHTML=on?"Space play/pause · ←/→ change rally · drag to rotate":"drag to rotate · scroll to zoom";});
-  document.getElementById("rp-prev").onclick=()=>{replay.idx=(replay.idx-1+pointIds.length)%pointIds.length;replay.shot=0;replay.u=0;updateRepLabel();};
-  document.getElementById("rp-next").onclick=()=>{replay.idx=(replay.idx+1)%pointIds.length;replay.shot=0;replay.u=0;updateRepLabel();};
+  segBind("c3-mode",v=>{c3state.mode=v;const on=v==="replay";document.getElementById("c3-rep").style.display=on?"flex":"none";document.getElementById("rp-shot").style.display=on?"block":"none";if(on){replay.shot=0;replay.u=0;replay.playing=true;setPlay();updateRepLabel();}document.getElementById("c3-note").innerHTML=on?"Space play/pause · ←/→ change rally · click a point to jump":"drag to rotate · scroll to zoom";setReplayPanel(on);});
+  document.getElementById("rp-prev").onclick=()=>gotoPointIdx(replay.idx-1);
+  document.getElementById("rp-next").onclick=()=>gotoPointIdx(replay.idx+1);
   document.getElementById("rp-play").onclick=()=>{replay.playing=!replay.playing;setPlay();};
+  document.getElementById("rp-toggle").onclick=()=>setReplayPanel(!document.getElementById("replay-side").classList.contains("show"));
+  document.getElementById("rs-close").onclick=()=>setReplayPanel(false);
   let drag=false,lx,ly;
   c3canvas.addEventListener("pointerdown",e=>{drag=true;lx=e.clientX;ly=e.clientY;c3state.orbit=false;document.querySelector('#c3-orbit button[data-x="orbit"]').classList.remove("on");c3canvas.setPointerCapture(e.pointerId);});
   c3canvas.addEventListener("pointermove",e=>{if(!drag)return;cam.yaw+=(e.clientX-lx)*0.008;cam.pitch=clip(cam.pitch+(e.clientY-ly)*0.006,0.15,1.45);lx=e.clientX;ly=e.clientY;});
@@ -776,13 +950,48 @@ function setup3D(){
   buildLegend();loop3D();
 }
 function setPlay(){const b=document.getElementById("rp-play");b.textContent=replay.playing?"⏸":"▶";b.classList.toggle("on",replay.playing);}
-function updateRepLabel(){const pid=currentPid(),shots=byPoint[pid],pt=M.points.find(p=>p.point===pid)||{};const wl=pt.winner?disp(pt.winner):"?";document.getElementById("rp-label").innerHTML=`Point ${pid} · ${shots.length} shots · won by <b style="color:${pt.winner==="you"?C.you:C.opp}">${wl}</b>`;}
+function updateRepLabel(){const pid=currentPid(),shots=byPoint[pid],pt=M.points.find(p=>p.point===pid)||{},st=scoreByPt[pid];const wl=pt.winner?disp(pt.winner):"?";const sc=st?` · <span style="color:var(--ink)">${st.games.you}-${st.games.opp}, ${st.game}</span>`:"";document.getElementById("rp-label").innerHTML=`Point ${pid} · ${shots.length} shots · won by <b style="color:${pt.winner==="you"?C.you:C.opp}">${wl}</b>${sc}`;}
+/* ---- docked point panel: skip to any point during replay ---- */
+function gotoPoint(pid){const idx=pointIds.indexOf(pid);if(idx<0)return;replay.idx=idx;replay.shot=0;replay.u=0;replay._hold=0;replay.playing=true;setPlay();updateRepLabel();syncReplaySide();}
+function gotoPointIdx(i){const n=pointIds.length;replay.idx=(i%n+n)%n;replay.shot=0;replay.u=0;replay._hold=0;updateRepLabel();syncReplaySide();}
+function setReplayPanel(open){rsState.open=open;const side=document.getElementById("replay-side");if(!side)return;side.classList.toggle("show",open);const tb=document.getElementById("rp-toggle");if(tb)tb.classList.toggle("on",open);if(open){renderReplaySide();syncReplaySide();}if(c3resize)requestAnimationFrame(()=>c3resize());}
+function renderReplaySide(){
+  const seg=clear("rs-wonby");
+  [["all","All"],["you",disp("you")],["opp",disp("opp")]].forEach(([k,lab])=>{const b=mk("button",(k===rsState.wonby?"on ":"")+(k==="you"?"you":k==="opp"?"opp":""),lab);b.dataset.x=k;b.onclick=()=>{rsState.wonby=k;segSet("rs-wonby",k);drawReplaySideList();};seg.appendChild(b);});
+  segSet("rs-ending",rsState.ending);segBind("rs-ending",v=>{rsState.ending=v;drawReplaySideList();});
+  drawReplaySideList();
+}
+function drawReplaySideList(){
+  const box=clear("rs-list");
+  const arr=M.points.filter(p=>{
+    if(rsState.wonby!=="all"&&p.winner!==rsState.wonby)return false;
+    if(rsState.ending==="winner"&&p.reason!=="winner")return false;
+    if(rsState.ending==="error"&&p.reason!=="error")return false;
+    return true;
+  });
+  if(!arr.length){box.appendChild(mk("div","pnone","No points match."));return;}
+  arr.forEach(p=>{
+    const st=scoreByPt[p.point],fs=finalShot(p),can=pointIds.indexOf(p.point)>=0;
+    const smk=st?(st.wonSet?`set ${st.sets.you}-${st.sets.opp}`:st.wonGame?`game → ${st.games.you}-${st.games.opp}`:`${st.games.you}-${st.games.opp} · ${st.game}`):"";
+    const row=mk("div","psrow"+(can?"":" dead"));row.dataset.pid=p.point;
+    row.innerHTML=`<div style="min-width:0"><div class="ps-end ${fs.tone}">${fs.txt}</div><div class="ps-sub"><span class="pdot" style="background:${colOf(p.winner)}"></span>${smk}</div></div><div class="ps-rally">${p.n_shots}<span>shots</span></div>`;
+    if(can)row.onclick=()=>gotoPoint(p.point);
+    box.appendChild(row);
+  });
+  syncReplaySide();
+}
+function syncReplaySide(){
+  const pid=currentPid(),st=scoreByPt[pid],sc=document.getElementById("rs-score");
+  if(sc&&st){const setp=(st.sets.you||st.sets.opp)?`Sets ${st.sets.you}–${st.sets.opp} · `:"";sc.innerHTML=`<div class="rs-sm">${st.games.you}-${st.games.opp} · ${st.game}</div><div class="rs-ss">${setp}${st.tally.you}–${st.tally.opp} points won</div>`;}
+  const list=document.getElementById("rs-list");if(!list)return;
+  list.querySelectorAll(".psrow").forEach(r=>{const on=Number(r.dataset.pid)===pid;r.classList.toggle("on",on);if(on){const top=r.offsetTop-list.offsetTop;if(top<list.scrollTop||top+r.offsetHeight>list.scrollTop+list.clientHeight)list.scrollTop=top-list.clientHeight/2+r.offsetHeight/2;}});
+}
 function project(x,y,z){let wx=x,wy=y-NET,wz=z;const cy=Math.cos(cam.yaw),sy=Math.sin(cam.yaw);let X=wx*cy-wy*sy,Y=wx*sy+wy*cy;const cp=Math.cos(cam.pitch),sp=Math.sin(cam.pitch);let Yd=Y*cp-wz*sp,Zt=Y*sp+wz*cp;const s=cam.f/(cam.dist+Yd);return {x:cam.cx+X*s*cam.scale,y:cam.cy-Zt*s*cam.scale,depth:Yd};}
 function trajColor(t){if(c3state.color==="player")return colOf(t.player);if(c3state.color==="spin")return SPINC[t.spin]||C.muted;return t.outcome==="winner"?C.good:t.outcome==="error"?C.bad:C.rally;}
 function filteredTraj(){return M.trajectories.filter(t=>{if(c3state.shot==="serve"&&t.stroke!=="Serve")return false;if(c3state.shot==="ground"&&!(t.stroke==="Forehand"||t.stroke==="Backhand"))return false;return true;});}
 function buildArcPts(t){const H=[clip(t.hx,-7,7),clip(t.hy,-3,27),clip(t.hz,0.1,4)],B=[clip(t.bx,-7,7),clip(t.by,-2,27),0];const dx=B[0]-H[0],dy=B[1]-H[1],dist=Math.hypot(dx,dy);let apex=Math.max(0.4,Math.min(3.4,0.14*dist))+H[2]*0.15;if(t.stroke==="Serve")apex*=0.75;if((H[1]-NET)*(B[1]-NET)<0)apex=Math.max(apex,1.3);const N=18,pts=[];let dsum=0;for(let i=0;i<=N;i++){const u=i/N,x=H[0]+dx*u,y=H[1]+dy*u,z=Math.max(0,H[2]*(1-u)+apex*4*u*(1-u)),p=project(x,y,z);pts.push(p);dsum+=p.depth;}return {pts,depth:dsum/pts.length,color:trajColor(t),t};}
 function arcWorld(t,u){const H=[clip(t.hx,-7,7),clip(t.hy,-3,27),clip(t.hz,0.1,4)],B=[clip(t.bx,-7,7),clip(t.by,-2,27),0];const dx=B[0]-H[0],dy=B[1]-H[1],dist=Math.hypot(dx,dy);let apex=Math.max(0.4,Math.min(3.4,0.14*dist))+H[2]*0.15;if(t.stroke==="Serve")apex*=0.75;if((H[1]-NET)*(B[1]-NET)<0)apex=Math.max(apex,1.3);return [H[0]+dx*u,H[1]+dy*u,Math.max(0,H[2]*(1-u)+apex*4*u*(1-u))];}
-function loop3D(){requestAnimationFrame(loop3D);if(!document.querySelector('[data-v="court3d"]').classList.contains("on"))return;if(c3state.orbit)cam.yaw+=0.0022;if(c3state.mode==="replay"&&replay.playing){const shots=byPoint[currentPid()];replay.u+=0.02*replay.speed;if(replay.u>=1){replay.u=0;replay.shot++;if(replay.shot>=shots.length){replay.shot=shots.length-1;replay.u=1;replay._hold++;if(replay._hold>45){replay._hold=0;replay.idx=(replay.idx+1)%pointIds.length;replay.shot=0;replay.u=0;updateRepLabel();}}}}render3D();}
+function loop3D(){requestAnimationFrame(loop3D);if(!document.querySelector('[data-v="court3d"]').classList.contains("on"))return;if(c3state.orbit)cam.yaw+=0.0022;if(c3state.mode==="replay"&&replay.playing){const shots=byPoint[currentPid()];replay.u+=0.02*replay.speed;if(replay.u>=1){replay.u=0;replay.shot++;if(replay.shot>=shots.length){replay.shot=shots.length-1;replay.u=1;replay._hold++;if(replay._hold>45){replay._hold=0;replay.idx=(replay.idx+1)%pointIds.length;replay.shot=0;replay.u=0;updateRepLabel();syncReplaySide();}}}}render3D();}
 function render3D(){
   const ctx=c3ctx;if(!ctx)return;const w=c3canvas.width/devicePixelRatio,h=580;ctx.clearRect(0,0,w,h);
   const corners=[[-DBL,0],[DBL,0],[DBL,BASE],[-DBL,BASE]].map(([x,y])=>project(x,y,0));

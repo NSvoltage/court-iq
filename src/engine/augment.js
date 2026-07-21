@@ -49,9 +49,11 @@
         elite_shots:gq.filter(q=>q>=70).length, weak_shots:gq.filter(q=>q<30).length, n:gq.length};
     }
 
-    // ---------- REPAIR: fix outcomes distorted by dropped mid-rally tracking ----------
-    // Runs before anything that consumes point winners.
-    if(root.SVRepair) M.repair = root.SVRepair.repair(M, byPoint);
+    // ---------- DATA INTEGRITY: classify, reconstruct, correct, verify ----------
+    // Owns every outcome decision. Must run before anything consuming winners.
+    if(root.SVIntegrity) root.SVIntegrity.process(M, byPoint);
+    // narrative text was written from pre-repair counts — regenerate it
+    if(root.SVEngine && root.SVEngine.buildBrief) M.brief = root.SVEngine.buildBrief(M);
 
     // ---------- reconstruction (score), built on the REPAIRED outcomes ----------
     const src=Counter([]); const perPoint=[];
@@ -83,8 +85,8 @@
     // reconcile the coaching-brief headline to the reconstructed full-match score
     if(M.brief&&M.brief.match_summary){
       const rs=reconFull, lead=rs.opp>=rs.you?M.meta.opp:M.meta.tracked, hi=Math.max(rs.you,rs.opp), lo=Math.min(rs.you,rs.opp), wp=pct(hi,rs.you+rs.opp);
-      M.brief.match_summary.headline=`${lead} came out ahead ${hi}–${lo} across a reconstructed ${totalRallies} points (${wp}%, with ${M.reconstruction.pct_estimated}% estimated). The margin was manufactured almost entirely by ${M.meta.tracked}'s unforced errors, not by the opponent's offense.`;
-      M.brief.match_summary.score_context=`Rally-mode export gives no scoreboard. ${M.reconstruction.sources.measured} points end on a measured miss; the rest are reconstructed from shot quality and rally duration.`;
+      M.brief.match_summary.headline=`${lead} came out ahead ${hi}–${lo} on points. The margin was manufactured almost entirely by ${M.meta.tracked}'s unforced errors, not by the opponent's offense.`;
+      M.brief.match_summary.score_context=`Score is reconstructed from tracked points (±${M.integrity?M.integrity.verification.score_uncertainty:0}).`;
     }
     // expected winners: terminal 'In' shots that were genuinely high quality
     for(const k of ["you","opp"]){
@@ -175,81 +177,8 @@
       };
     }
 
-    // ---------- VERIFICATION: coherence checks so we never present impossible tennis ----------
-    M.verification = verify(M);
     return M;
   }
 
-  // Runs on every parsed match. Judges which stat FAMILIES are trustworthy for this
-  // export and flags logical impossibilities. It does NOT assume practice vs match —
-  // it reports what the data can and can't support, and (for outcome stats) how much
-  // the incomplete rally tracking biases them.
-  function verify(M){
-    const P=M.points, flags=[];
-    const svcY=M.serve.you.service_points_won_pct, svcO=M.serve.opp.service_points_won_pct;
-    const retY=M.serve.you.return_points_won_pct, retO=M.serve.opp.return_points_won_pct;
-    // (1) serve-run structure: clean 4–7-point games, or long undifferentiated blocks?
-    const seq=P.map(p=>p.server).filter(Boolean);
-    const runs=[]; let cur=null,len=0;
-    seq.forEach(s=>{ if(s===cur)len++; else { if(cur!=null)runs.push(len); cur=s; len=1; } });
-    if(cur!=null)runs.push(len);
-    const avgRun=runs.length?seq.length/runs.length:0, longest=runs.length?Math.max.apply(null,runs):0;
-    const gameStructured = runs.length>=8 && avgRun<=7 && longest<=9;
-    // (2) outcome-attribution bias from truncated tracking
-    const served=P.filter(p=>p.server);
-    const retLast=served.filter(p=>p.last_player!==p.server).length;
-    const retLastPct=served.length?rnd(100*retLast/served.length,0):0;
-    const ambigEnd=P.filter(p=>p.last_result==="In").length;
-    const ambigPct=P.length?rnd(100*ambigEnd/P.length,0):0;
-    const outcomeBiased = ambigPct>=25 && retLastPct>=55;
-    // (3) simple sanity
-    const bothBelow50 = svcY<50 && svcO<50;
-    const breaksImplied = retY>50 || retO>50;
-    const dfY=M.serve.you.service_points?M.serve.you.serve_fault_points/M.serve.you.service_points:0;
-    const dfO=M.serve.opp.service_points?M.serve.opp.serve_fault_points/M.serve.opp.service_points:0;
-    const dfHigh = dfY>0.12 || dfO>0.12;
-
-    if(!gameStructured) flags.push({level:"warn",code:"no_game_structure",
-      msg:`This export doesn't encode game structure — serves come in turns of up to ${longest} points, not 4–7-point games (rally-mode doesn't store games, and warm-up/rally segments can be mixed in). Holds, breaks, games, sets, tiebreaks and a clean 1st/2nd-serve split can't be reconstructed from it. Attach the final score to unlock them.`});
-    const rep=M.repair;
-    if(rep){ // outcomes were repaired — report the residual uncertainty, not the raw defect
-      const imp=rep.endings.truncated_imputed;
-      flags.push({level:"info",code:"outcomes_repaired",
-        msg:`${ambigPct}% of points ended on an ambiguous "in" ball (tracking dropped mid-rally, returner-last ${retLastPct}% of the time). ${imp} of them were re-imputed from the measured-only base rate instead of crediting the last tracked shot — which removed ${rep.winners_changed} wrong point winners and cut phantom winners. Treat the score as ±${imp} points; winners/errors now count only endings we can defend.`});
-    } else if(outcomeBiased) flags.push({level:"warn",code:"outcome_truncation",
-      msg:`Rally tracking is incomplete: ${ambigPct}% of points end on an ambiguous "in" ball and the returner hits the last tracked shot ${retLastPct}% of the time. That biases who gets credited the point, so winner counts, the score and service-points-won are low-confidence.`});
-    if(bothBelow50) flags.push({level:"warn",code:"serve_below_50",
-      msg:`Both players "win" under half their service points (${svcY}% / ${svcO}%) — servers cannot both lose the majority of their service points.`});
-    if(breaksImplied) flags.push({level:"info",code:"breaks_implied",
-      msg:`Returners win over half their return points, so in match play serve was broken repeatedly and break points certainly occurred — we just can't locate them without a game structure.`});
-    if(dfHigh) flags.push({level:"info",code:"df_inflated",
-      msg:`Double-fault rate looks inflated (${Math.round(dfY*100)}% / ${Math.round(dfO*100)}%): with one serve logged per point, most are single serve-faults, not true doubles.`});
-
-    // Confidence per stat family. Measured-per-shot layer is trustworthy; inferred
-    // outcome/serve/game layer is not, for this export.
-    // After repair the outcome layer is usable (approximate, not wrong). Without it,
-    // outcome stats stay gated.
-    const repaired=!!rep;
-    const reliable = {
-      measured_shots:true,        // per-shot in/out/net, contact, placement
-      placement:true, shot_speed:true, movement:true, shot_quality:true,
-      errors:true,                // net/out endings are definitive
-      serve_in_rate:true,         // did the logged serve land in
-      point_outcomes:repaired||!outcomeBiased,
-      winners:repaired||!outcomeBiased,
-      score:repaired||!outcomeBiased,       // approximate — see score_uncertainty
-      service_stats:(repaired||!outcomeBiased)&&!bothBelow50,
-      first_second_serve:false, double_faults:!dfHigh,
-      break_points:false, games_sets:false, tiebreaks:false
-    };
-    const level = flags.some(f=>f.level==="warn") ? "caution" : "ok";
-    return { level, game_structure_recoverable:gameStructured, outcome_biased:outcomeBiased,
-      outcomes_repaired:repaired, score_uncertainty:rep?rep.endings.truncated_imputed:null,
-      ambiguous_end_pct:ambigPct, returner_last_shot_pct:retLastPct,
-      serve_runs:runs.length, avg_serve_run:rnd(avgRun,1), longest_serve_run:longest,
-      both_serve_below_50:bothBelow50, breaks_implied:breaksImplied,
-      df_rate:{you:rnd(dfY*100,0),opp:rnd(dfO*100,0)}, needs_final_score:!gameStructured,
-      reliable, flags };
-  }
   root.SVEngine3={build};
 })(typeof window!=="undefined"?window:globalThis);

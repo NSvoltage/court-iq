@@ -371,5 +371,5 @@
     };
   }
 
-  root.SVEngine = { build };
+  root.SVEngine = { build, buildBrief };
 })(typeof window !== "undefined" ? window : globalThis);

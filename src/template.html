@@ -112,14 +112,13 @@ canvas{display:block;width:100%;touch-action:none}
 /* match summary */
 .kick{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:700;text-align:center}
 .board{background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;margin:14px 0 16px}
-.prow{display:grid;grid-template-columns:1fr auto;align-items:center;padding:15px 22px}
-.prow+.prow{border-top:1px solid var(--line)}
-.prow.win{background:linear-gradient(90deg,rgba(120,150,200,.06),transparent)}
+.scorerow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;padding:15px 22px;gap:12px}
+.scorerow+.scorerow{border-top:1px solid var(--line)}
+.scorerow.win{background:linear-gradient(90deg,rgba(120,150,200,.06),transparent)}
 .pl{display:flex;align-items:center;gap:12px}
 .pdot2{width:12px;height:12px;border-radius:50%;flex:none}
-.pname{font-size:22px;font-weight:800;letter-spacing:-.01em}
-.pname .srv{color:var(--warn);margin-left:8px;font-size:12.5px;vertical-align:middle;font-weight:700;white-space:nowrap}
-.pname{white-space:nowrap}
+.pname{font-size:22px;font-weight:800;letter-spacing:-.01em;line-height:1.15}
+.srv{color:var(--warn);font-size:11.5px;font-weight:700;margin-top:2px;white-space:nowrap}
 .sbox{min-width:74px;height:44px;border-radius:9px;background:var(--panel2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
 .sbox.w{color:#fff;border-color:transparent}
 .result{text-align:center;color:var(--ink2);font-size:14.5px;line-height:1.5;max-width:66ch;margin:0 auto}
@@ -646,8 +645,8 @@ function renderOverview(){
   const order=(leadK==="opp"?[["opp",opp],["you",you]]:[["you",you],["opp",opp]]);
   $ov("ov-board").innerHTML=order.map(([k,name],i)=>{
     const win=k===leadK, val=GT?(GT[k]||[]).join(" "):pts[k];
-    return `<div class="prow ${i===0?"win":""}"><div class="pl"><span class="pdot2" style="background:var(--${k})"></span>`+
-      `<span class="pname">${name}${i===0?`<span class="srv">▸ ${GT?"won":"more points"}</span>`:""}</span></div>`+
+    return `<div class="scorerow ${i===0?"win":""}"><div class="pl"><span class="pdot2" style="background:var(--${k})"></span>`+
+      `<div style="min-width:0"><div class="pname">${name}</div>${i===0?`<div class="srv">▸ ${GT?"won":"more points"}</div>`:""}</div></div>`+
       `<div class="sets"><div class="sbox ${win?"w":""}" style="${win?`background:var(--${k})`:""}">${val}</div></div></div>`;
   }).join("");
   $ov("ov-result").innerHTML=GT?`Final score as recorded.`
@@ -662,22 +661,26 @@ function renderOverview(){
   $ov("ov-insights").innerHTML=ins.map(c=>`<div class="icard"><div class="ik">${c.k}</div><div class="it">${c.html}</div><span class="exp" data-go="${c.tab}">Open ${c.label} →</span></div>`).join("");
   $ov("ov-insights").querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>showView(b.dataset.go));
 
-  /* Stats: what we measured, then what we had to reconstruct */
-  const pc=v=>v+"%";
-  const MEAS=[["Unforced errors",we.you.errors,we.opp.errors],
-    ["Groundstrokes in play",pc(rel.you.in_play_pct),pc(rel.opp.in_play_pct)],
-    ["1st serve in",pc(sv.you.in_rate),pc(sv.opp.in_rate)],
-    ["Fastest serve",sv.you.max_speed+"<small> mph</small>",sv.opp.max_speed+"<small> mph</small>"],
-    ["Shot quality (0–100)",q.you.groundstroke_q,q.opp.groundstroke_q],
-    ["Distance covered",(mv.you.dist_est_m/1000).toFixed(2)+"<small> km</small>",(mv.opp.dist_est_m/1000).toFixed(2)+"<small> km</small>"]];
-  const RECON=[["Winners",we.you.winners,we.opp.winners],
-    ["Winner : error ratio",we.you.winner_error_ratio,we.opp.winner_error_ratio],
-    ["Points won when serving",pc(sv.you.service_points_won_pct),pc(sv.opp.service_points_won_pct)],
-    ["Total points won",pts.you,pts.opp]];
-  const rows=a=>a.map(([lab,x,y])=>`<div class="srow"><div class="num l">${x}</div><div class="lab">${lab}</div><div class="num r">${y}</div></div>`).join("");
+  /* One stat sheet in reading order — serve, then rally, then the outcome.
+     Rows we had to reconstruct carry an asterisk rather than being fenced off. */
+  const pc=v=>v+"%", A='<span class="ast" title="Partly reconstructed: tracking stopped mid-rally on some points, so this is an estimate. See Data notes.">*</span>';
+  const ROWS=[
+    ["Aces",sv.you.aces_untouched,sv.opp.aces_untouched,0],
+    ["1st serve in",pc(sv.you.in_rate),pc(sv.opp.in_rate),0],
+    ["Fastest serve",sv.you.max_speed+"<small> mph</small>",sv.opp.max_speed+"<small> mph</small>",0],
+    ["Points won when serving",pc(sv.you.service_points_won_pct),pc(sv.opp.service_points_won_pct),1],
+    ["Points won when returning",pc(sv.you.return_points_won_pct),pc(sv.opp.return_points_won_pct),1],
+    ["Groundstrokes in play",pc(rel.you.in_play_pct),pc(rel.opp.in_play_pct),0],
+    ["Shot quality (0–100)",q.you.groundstroke_q,q.opp.groundstroke_q,0],
+    ["Distance covered",(mv.you.dist_est_m/1000).toFixed(2)+"<small> km</small>",(mv.opp.dist_est_m/1000).toFixed(2)+"<small> km</small>",0],
+    ["Unforced errors",we.you.errors,we.opp.errors,0],
+    ["Winners",we.you.winners,we.opp.winners,1],
+    ["Winner : error ratio",we.you.winner_error_ratio,we.opp.winner_error_ratio,1],
+    ["Total points won",pts.you,pts.opp,1]
+  ];
   $ov("ov-stats").innerHTML=`<div class="statshead"><span class="l">${you}</span><span class="m"></span><span class="r">${opp}</span></div>`+
-    `<div class="ghead">Measured <span class="lnk" data-go="reliability">See Reliability →</span></div>`+rows(MEAS)+
-    `<div class="ghead">Reconstructed${V?AST("score"):""} <span class="lnk" data-go="we">See Winners & Errors →</span></div>`+rows(RECON);
+    ROWS.map(([lab,x,y,est])=>`<div class="srow"><div class="num l">${x}</div><div class="lab">${lab}${est&&V?A:""}</div><div class="num r">${y}</div></div>`).join("")+
+    `<div class="scaleNote" style="font-size:10.5px;color:var(--muted);margin-top:14px;border-top:1px solid var(--line);padding-top:11px">${V?`${A} reconstructed where tracking stopped mid-rally — the score carries about ±${V.score_uncertainty} points. `:""}<span class="lnk" data-go="reliability" style="color:var(--accent);cursor:pointer;font-weight:700">See Reliability →</span> &nbsp; <span class="lnk" data-go="we" style="color:var(--accent);cursor:pointer;font-weight:700">See Winners &amp; Errors →</span></div>`;
   $ov("ov-stats").querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>showView(b.dataset.go));
 
   drawMomentum();

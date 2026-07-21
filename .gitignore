@@ -13,4 +13,7 @@ npm-debug.log*
 
 # local data — never commit real match exports
 *.xlsx
+# ...except the anonymised demo export, so there's something to try the
+# "Load match(es)" path with
+!examples/*.xlsx
 /private/

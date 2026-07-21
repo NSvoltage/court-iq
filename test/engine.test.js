@@ -90,6 +90,17 @@ test('integrity: repair corrects impossible tennis', () => {
   assert.equal(M.winners_errors.you.winners + M.winners_errors.opp.winners, defensible);
 });
 
+test('integrity: a missed first serve does not end the point', () => {
+  // one serve is logged per point, so a lone faulted serve is ambiguous:
+  // it must not be scored as the server losing the point
+  const lone = M.points.filter((p) => p.n_shots <= 1 && p.last_stroke === 'Serve' && p.last_result !== 'In');
+  assert.ok(lone.length > 0, 'sample has lone faulted serves');
+  lone.forEach((p) => assert.equal(p.outcome_class, 'reconstructed'));
+  // and with that corrected, servers win the majority of their service points
+  assert.ok(M.serve.you.service_points_won_pct > 45);
+  assert.ok(M.serve.opp.service_points_won_pct > 45);
+});
+
 test('integrity: every change is auditable', () => {
   const a = M.integrity.repair.audit;
   assert.ok(Array.isArray(a) && a.length === M.integrity.repair.winners_changed);

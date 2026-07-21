@@ -28,9 +28,17 @@ test('reads a real SwingVision .xlsx off disk', () => {
 });
 
 test('the demo export carries no identifying name', () => {
-  // this file ships in a public repo - it must not name a real person
-  const blob = JSON.stringify(raw);
-  assert.ok(!/Redacted/.test(blob), 'surname present in the export');
+  // This file ships in a public repo, so it must not name a real person.
+  // Checked as a property rather than by matching the surname, which would
+  // put the name back into the repo in the very test meant to keep it out:
+  // the player cells must be a single token, never "First Last".
+  const header = raw.Settings[0].map(String);
+  const values = raw.Settings[1].map(String);
+  ['Host Team', 'Guest Team'].forEach(col => {
+    const name = values[header.indexOf(col)] || '';
+    assert.ok(name.length > 0, col + ' is empty');
+    assert.ok(!/\s/.test(name.trim()), col + ' looks like a full name: ' + name);
+  });
 });
 
 test('the .xlsx and the bundled JSON sample describe the same match', () => {

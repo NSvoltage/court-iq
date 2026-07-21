@@ -1087,11 +1087,11 @@ function drawTargetMap(){
     if(!zones)return;
     const cx=x+w/2,cy=y+h/2;
     if(vert){ // tall side band — stack the figures
-      svg.appendChild(T(cx,cy-4,n,{"text-anchor":"middle",fill:n?C.bad:C.muted,"font-size":13,"font-weight":800}));
-      svg.appendChild(T(cx,cy+9,shr(n)+"%",{"text-anchor":"middle",fill:C.muted,"font-size":9.5}));
+      svg.appendChild(T(cx,cy-4,shr(n)+"%",{"text-anchor":"middle",fill:n?C.bad:C.muted,"font-size":13,"font-weight":800}));
+      svg.appendChild(T(cx,cy+9,n,{"text-anchor":"middle",fill:C.muted,"font-size":9.5}));
       svg.appendChild(T(cx,cy+22,lab,{"text-anchor":"middle",fill:C.muted,"font-size":8.5,"letter-spacing":".06em"}));
     } else {  // short horizontal band — one line so nothing collides
-      svg.appendChild(T(cx,cy+4,`${lab}  ${n} · ${shr(n)}%`,{"text-anchor":"middle",fill:n?C.bad:C.muted,"font-size":11.5,"font-weight":800,"letter-spacing":".04em"}));
+      svg.appendChild(T(cx,cy+4,`${lab}  ${shr(n)}% · ${n}`,{"text-anchor":"middle",fill:n?C.bad:C.muted,"font-size":11.5,"font-weight":800,"letter-spacing":".04em"}));
     }
   };
   band(xMin,oyTop-bandH-2,cW,bandH,outs.long,"LONG",false);

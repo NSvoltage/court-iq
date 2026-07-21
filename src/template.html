@@ -109,6 +109,42 @@ canvas{display:block;width:100%;touch-action:none}
 .drop.on{display:flex}
 .drop .box{border:2px dashed var(--accent);border-radius:20px;padding:60px 80px;text-align:center;color:var(--ink);font-size:18px;font-weight:700}
 .foot{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:11.5px;line-height:1.6}
+/* match summary */
+.kick{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:700;text-align:center}
+.board{background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;margin:14px 0 16px}
+.prow{display:grid;grid-template-columns:1fr auto;align-items:center;padding:15px 22px}
+.prow+.prow{border-top:1px solid var(--line)}
+.prow.win{background:linear-gradient(90deg,rgba(120,150,200,.06),transparent)}
+.pl{display:flex;align-items:center;gap:12px}
+.pdot2{width:12px;height:12px;border-radius:50%;flex:none}
+.pname{font-size:22px;font-weight:800;letter-spacing:-.01em}
+.pname .srv{color:var(--warn);margin-left:8px;font-size:12.5px;vertical-align:middle;font-weight:700;white-space:nowrap}
+.pname{white-space:nowrap}
+.sbox{min-width:74px;height:44px;border-radius:9px;background:var(--panel2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.sbox.w{color:#fff;border-color:transparent}
+.result{text-align:center;color:var(--ink2);font-size:14.5px;line-height:1.5;max-width:66ch;margin:0 auto}
+.sect{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;text-align:center;margin:30px 0 12px}
+.icard{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:14px;padding:15px 19px;margin-bottom:12px}
+.icard .ik{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:800;margin-bottom:6px}
+.icard .it{font-size:15.5px;line-height:1.5;color:var(--ink2)}.icard .it b{color:var(--ink)}
+.icard .exp{display:inline-block;margin-top:9px;font-size:12.5px;font-weight:700;color:var(--accent);cursor:pointer}
+.icard .exp:hover{text-decoration:underline}
+.stats{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:4px 24px 16px}
+.statshead{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:15px 0 11px}
+.statshead .l{text-align:right;padding-right:20px;color:var(--you);font-weight:800;font-size:14.5px}
+.statshead .r{text-align:left;padding-left:20px;color:var(--opp);font-weight:800;font-size:14.5px}
+.statshead .m{min-width:150px}
+.ghead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:18px 0 2px;border-top:1px solid var(--line);margin-top:6px;font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink2)}
+.ghead:first-of-type{border-top:none;margin-top:0}
+.ghead .lnk{font-size:11px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--accent);cursor:pointer;white-space:nowrap}
+.ghead .lnk:hover{text-decoration:underline}
+.srow{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:10px 0}
+.srow+.srow{border-top:1px solid rgba(150,170,200,.06)}
+.srow .num{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.05}
+.srow .num.l{text-align:right;padding-right:20px;color:var(--you)}
+.srow .num.r{text-align:left;padding-left:20px;color:var(--opp)}
+.srow .num small{font-size:12px;font-weight:700;opacity:.75}
+.srow .lab{text-align:center;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:700;min-width:150px}
 .ast{color:var(--warn);font-size:.72em;vertical-align:super;font-weight:800;margin-left:1px;cursor:help}
 .notes{margin-top:8px}
 .notes summary{cursor:pointer;color:var(--ink2);font-weight:600;list-style:none;font-size:11.5px}
@@ -198,11 +234,18 @@ canvas{display:block;width:100%;touch-action:none}
   <div class="wrap">
     <!-- MATCH -->
     <section class="view on" data-v="overview">
-      <h2 class="viewhead">Match overview</h2>
-      <p class="viewsub" id="ov-sub"></p>
-      <div class="grid g4" id="ov-tiles" style="margin-bottom:16px"></div>
-      <div class="callout" id="ov-callout" style="margin-bottom:16px"></div>
-      <div class="card"><h3>Momentum — running point differential</h3><p class="hint">Cumulative points (tracked player minus opponent). <b style="color:var(--you)">Click any point to replay that rally in 3D.</b></p><div id="momentum"></div></div>
+      <div class="kick" id="ov-kick"></div>
+      <div class="board" id="ov-board"></div>
+      <p class="result" id="ov-result"></p>
+
+      <div class="sect">What decided it</div>
+      <div id="ov-insights"></div>
+
+      <div class="sect">Match stats</div>
+      <div class="stats" id="ov-stats"></div>
+
+      <div class="sect">Momentum</div>
+      <div class="card"><h3>Running point differential</h3><p class="hint">Cumulative points (tracked player minus opponent). <b style="color:var(--you)">Click any point to replay that rally in 3D.</b></p><div id="momentum"></div></div>
     </section>
 
     <section class="view" data-v="court3d">
@@ -590,20 +633,56 @@ function renderInsights(){
 /* ============ OVERVIEW ============ */
 function tiles(id,arr){const box=clear(id);arr.forEach(([k,v,cls,s])=>{const c=mk("div","card tile");c.innerHTML=`<div class="k">${k}</div><div class="v ${cls||''}">${v}</div><div class="s">${s||''}</div>`;box.appendChild(c);});}
 function renderOverview(){
-  const m=M.match,we=M.winners_errors,sv=M.serve,rec=M.reconstruction,q=M.quality,mv=M.player.movement;
-  document.getElementById("ov-sub").textContent=`${M.meta.tracked} — a high-variance ball-striker — vs ${M.meta.opp}, a steady counter-puncher.`;
-  tiles("ov-tiles",[
-    ["Final score"+AST("score"),`${rec.reconstructed_score.you}–${rec.reconstructed_score.opp}`,"opp",`±${(M.integrity&&M.integrity.verification.score_uncertainty)||0} points`],
-    ["Distance covered",`${(mv.you.dist_est_m/1000).toFixed(2)} km`,"you",`${M.meta.opp} ${(mv.opp.dist_est_m/1000).toFixed(2)} km`],
-    ["Shot-quality index",q.you.groundstroke_q,q.you.groundstroke_q>=q.opp.groundstroke_q?"good":"warn",`${M.meta.opp} ${q.opp.groundstroke_q} · scale 0–100`],
-    ["Winners"+AST("winners"),`${we.you.winners}`,"good",`${q.you.expected_winners} expected from shot quality`],
-    [`${M.meta.tracked} serve`,`${sv.you.avg_speed} mph`,"you",`top ${sv.you.max_speed} · ${sv.you.in_rate}% in`],
-    ["Service pts won",sv.you.service_points_won_pct+"%","bad","not winning behind serve"],
-    ["Avg rally",m.avg_rally_shots,"","shots · longest "+m.longest_rally],
-    [`${M.meta.opp} BH winners`,we.opp.winners_by_stroke.Backhand||0,"opp","their #1 weapon"]]);
-  document.getElementById("ov-callout").innerHTML=`<div class="big">${M.brief.match_summary.headline.replace(/unforced errors/i,'<b class="bad">unforced errors</b>')}</div><p>${M.brief.match_summary.player_style.you}</p>`;
+  const you=M.meta.tracked,opp=M.meta.opp,rec=M.reconstruction,we=M.winners_errors,sv=M.serve,q=M.quality;
+  const I=M.integrity,V=I?I.verification:null,rel=M.player.reliability,mv=M.player.movement;
+  const pts={you:rec.reconstructed_score.you,opp:rec.reconstructed_score.opp};
+  const leadK=pts.opp>=pts.you?"opp":"you";
+  $ov("ov-kick").textContent=`${you} vs ${opp} · ${M.meta.start_time||""} · ${M.match.total_points} points`;
+
+  /* Scoreboard. No real scoreboard is stored, and games/sets can't be derived, so
+     we show points rather than inventing a scoreline — and render the true one the
+     moment a final score is supplied. */
+  const GT=M.final_score||null;
+  const order=(leadK==="opp"?[["opp",opp],["you",you]]:[["you",you],["opp",opp]]);
+  $ov("ov-board").innerHTML=order.map(([k,name],i)=>{
+    const win=k===leadK, val=GT?(GT[k]||[]).join(" "):pts[k];
+    return `<div class="prow ${i===0?"win":""}"><div class="pl"><span class="pdot2" style="background:var(--${k})"></span>`+
+      `<span class="pname">${name}${i===0?`<span class="srv">▸ ${GT?"won":"more points"}</span>`:""}</span></div>`+
+      `<div class="sets"><div class="sbox ${win?"w":""}" style="${win?`background:var(--${k})`:""}">${val}</div></div></div>`;
+  }).join("");
+  $ov("ov-result").innerHTML=GT?`Final score as recorded.`
+    :`No final score was captured, so we're not guessing at sets and games. On <b>points</b>, ${opp} finished ahead <b>${pts.opp}–${pts.you}</b>${V?` <span class="ast" title="Reconstructed where tracking stopped mid-rally.">*</span>`:""}. Add the match result to show a proper scoreline.`;
+
+  /* Takeaways — each opens the tab that proves it */
+  const ins=[
+    {k:"The story",tab:"we",label:"Winners & Errors",html:`The match turned on <b>unforced errors</b> — ${you} made <b>${we.you.errors}</b> to ${opp}'s ${we.opp.errors}. A ball hit out or into the net is measured exactly, so this is the part we can fully stand behind.`},
+    {k:"The misses are over-hits",tab:"reliability",label:"Reliability",html:`${you} keeps <b>${rel.you.in_play_pct}%</b> of groundstrokes in play — the stroke isn't broken. The misses skew <b>${rel.you.miss_out} long vs ${rel.you.miss_net} into the net</b>: over-hitting, not mishitting.`},
+    {k:"Where the ball goes",tab:"targeting",label:"Targeting",html:`${you} favours ${opp}'s <b>${(M.targeting&&M.targeting.you.side.left_pct>=50)?"backhand":"forehand"} side</b> and lands <b>${M.targeting?M.targeting.you.depth.deep_pct:0}%</b> of balls deep.`}
+  ];
+  $ov("ov-insights").innerHTML=ins.map(c=>`<div class="icard"><div class="ik">${c.k}</div><div class="it">${c.html}</div><span class="exp" data-go="${c.tab}">Open ${c.label} →</span></div>`).join("");
+  $ov("ov-insights").querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>showView(b.dataset.go));
+
+  /* Stats: what we measured, then what we had to reconstruct */
+  const pc=v=>v+"%";
+  const MEAS=[["Unforced errors",we.you.errors,we.opp.errors],
+    ["Groundstrokes in play",pc(rel.you.in_play_pct),pc(rel.opp.in_play_pct)],
+    ["1st serve in",pc(sv.you.in_rate),pc(sv.opp.in_rate)],
+    ["Fastest serve",sv.you.max_speed+"<small> mph</small>",sv.opp.max_speed+"<small> mph</small>"],
+    ["Shot quality (0–100)",q.you.groundstroke_q,q.opp.groundstroke_q],
+    ["Distance covered",(mv.you.dist_est_m/1000).toFixed(2)+"<small> km</small>",(mv.opp.dist_est_m/1000).toFixed(2)+"<small> km</small>"]];
+  const RECON=[["Winners",we.you.winners,we.opp.winners],
+    ["Winner : error ratio",we.you.winner_error_ratio,we.opp.winner_error_ratio],
+    ["Points won when serving",pc(sv.you.service_points_won_pct),pc(sv.opp.service_points_won_pct)],
+    ["Total points won",pts.you,pts.opp]];
+  const rows=a=>a.map(([lab,x,y])=>`<div class="srow"><div class="num l">${x}</div><div class="lab">${lab}</div><div class="num r">${y}</div></div>`).join("");
+  $ov("ov-stats").innerHTML=`<div class="statshead"><span class="l">${you}</span><span class="m"></span><span class="r">${opp}</span></div>`+
+    `<div class="ghead">Measured <span class="lnk" data-go="reliability">See Reliability →</span></div>`+rows(MEAS)+
+    `<div class="ghead">Reconstructed${V?AST("score"):""} <span class="lnk" data-go="we">See Winners & Errors →</span></div>`+rows(RECON);
+  $ov("ov-stats").querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>showView(b.dataset.go));
+
   drawMomentum();
 }
+function $ov(id){return document.getElementById(id);}
 function drawMomentum(){
   const box=clear("momentum");const s=M.momentum.point_diff_series,n=s.length;
   const W=box.clientWidth||1080,H=300,P={l:38,r:16,t:16,b:26},iw=W-P.l-P.r,ih=H-P.t-P.b;
@@ -1054,19 +1133,38 @@ function drawOppFigure(svg,cx,cy,hand,recv){
 }
 function drawTargetBreakdown(){
   const box=clear("tg-break"),tg=M.targeting[tgState.player],recv=otherK(tgState.player),hand=tgState.hand[recv],col=colOf(tgState.player);
-  const W=box.clientWidth||460,lx=152,bw=W-lx-78,you=disp(tgState.player);
+  const W=box.clientWidth||460,lx=152,bw=W-lx-104,you=disp(tgState.player);
   const sub=(t)=>mk("div",null,`<div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin:6px 0 6px">${t}</div>`);
   const barChart=(rows,h)=>{const H=rows.length*h+6,svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:H}),mx=Math.max(...rows.map(r=>r[1]),1);
     rows.forEach((r,i)=>{const y=i*h+4;svg.appendChild(T(0,y+h/2+4,r[0],{fill:C.ink2,"font-size":12}));svg.appendChild(el("rect",{x:lx,y:y+3,width:Math.max(3,bw*r[1]/mx),height:h-8,rx:4,fill:r[2],opacity:.9}));svg.appendChild(T(lx+bw*r[1]/mx+6,y+h/2+4,r[1]+"%"+(r[3]!=null?` (${r[3]})`:""),{fill:r[2],"font-size":11,"font-weight":700}));});return svg;};
+  // Every wing row shares ONE scale (absolute shot counts) so bar lengths are
+  // comparable across forehand and backhand, and each figure is a share of the
+  // player's TOTAL groundstrokes — not a share of that one wing.
   const tend=M.patterns2[tgState.player].tendency;
-  [["Forehand",tend.Forehand],["Backhand",tend.Backhand]].forEach(([stroke,rows])=>{
-    box.appendChild(sub(`${you}'s ${stroke.toLowerCase()} — where it goes`));
-    if(!rows||!rows.length){box.appendChild(mk("p","hint",`No ${stroke.toLowerCase()} data.`));return;}
+  const wings=[["Forehand",(tend.Forehand||[])],["Backhand",(tend.Backhand||[])]];
+  const totalShots=wings.reduce((a,[,rs])=>a+rs.reduce((x,r)=>x+r.n,0),0)||1;
+  const maxN=Math.max(1,...wings.reduce((a,[,rs])=>a.concat(rs.map(r=>r.n)),[]));
+  const shareOf=n=>Math.round(100*n/totalShots);
+  const wingChart=rows=>{
+    const h=27,H=rows.length*h+6,svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:H});
+    rows.forEach((r,i)=>{
+      const y=i*h+4,w=Math.max(3,bw*r.n/maxN);
+      svg.appendChild(T(0,y+18,dirLabel(r.dir),{fill:C.ink2,"font-size":12}));
+      svg.appendChild(el("rect",{x:lx,y:y+5,width:w,height:15,rx:4,fill:col,opacity:.9}));
+      svg.appendChild(T(lx+w+8,y+18,r.n,{fill:col,"font-size":13,"font-weight":800}));
+      svg.appendChild(T(W,y+18,shareOf(r.n)+"%",{"text-anchor":"end",fill:C.muted,"font-size":11.5}));
+    });
+    return svg;
+  };
+  wings.forEach(([stroke,rows])=>{
+    const n=rows.reduce((x,r)=>x+r.n,0);
+    box.appendChild(sub(`${you}'s ${stroke.toLowerCase()} — ${n} shots · ${shareOf(n)}% of all`));
+    if(!rows.length){box.appendChild(mk("p","hint",`No ${stroke.toLowerCase()} data.`));return;}
     const groups={};rows.forEach(r=>{(groups[dirGroup(r.dir)]=groups[dirGroup(r.dir)]||[]).push(r);});
     ["natural","runaround","serve","other"].forEach(g=>{
       const rs=groups[g];if(!rs||!rs.length)return;
       box.appendChild(mk("div",null,`<div style="font-size:10.5px;color:var(--muted);font-style:italic;margin:6px 0 2px">${GRPLABEL[g]}</div>`));
-      box.appendChild(barChart(rs.map(r=>[dirLabel(r.dir),r.pct,col,r.n]),26));
+      box.appendChild(wingChart(rs.slice().sort((a,b)=>b.n-a.n)));
     });
   });
   box.appendChild(sub("Depth it lands"));

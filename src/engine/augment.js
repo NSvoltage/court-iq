@@ -185,7 +185,73 @@
         segments:seg.map(S=>({seg:S.seg,n:S.n,left_pct:P(S.left,S.n),middle_pct:P(S.middle,S.n),right_pct:P(S.right,S.n),deep_pct:P(S.deep,S.n),right_side_pct:P(S.rightSide,S.rightSide+S.leftSide),left_side_pct:P(S.leftSide,S.rightSide+S.leftSide)}))
       };
     }
+
+    // ---------- VERIFICATION: coherence checks so we never present impossible tennis ----------
+    M.verification = verify(M);
     return M;
+  }
+
+  // Runs on every parsed match. Judges which stat FAMILIES are trustworthy for this
+  // export and flags logical impossibilities. It does NOT assume practice vs match —
+  // it reports what the data can and can't support, and (for outcome stats) how much
+  // the incomplete rally tracking biases them.
+  function verify(M){
+    const P=M.points, flags=[];
+    const svcY=M.serve.you.service_points_won_pct, svcO=M.serve.opp.service_points_won_pct;
+    const retY=M.serve.you.return_points_won_pct, retO=M.serve.opp.return_points_won_pct;
+    // (1) serve-run structure: clean 4–7-point games, or long undifferentiated blocks?
+    const seq=P.map(p=>p.server).filter(Boolean);
+    const runs=[]; let cur=null,len=0;
+    seq.forEach(s=>{ if(s===cur)len++; else { if(cur!=null)runs.push(len); cur=s; len=1; } });
+    if(cur!=null)runs.push(len);
+    const avgRun=runs.length?seq.length/runs.length:0, longest=runs.length?Math.max.apply(null,runs):0;
+    const gameStructured = runs.length>=8 && avgRun<=7 && longest<=9;
+    // (2) outcome-attribution bias from truncated tracking
+    const served=P.filter(p=>p.server);
+    const retLast=served.filter(p=>p.last_player!==p.server).length;
+    const retLastPct=served.length?rnd(100*retLast/served.length,0):0;
+    const ambigEnd=P.filter(p=>p.last_result==="In").length;
+    const ambigPct=P.length?rnd(100*ambigEnd/P.length,0):0;
+    const outcomeBiased = ambigPct>=25 && retLastPct>=55;
+    // (3) simple sanity
+    const bothBelow50 = svcY<50 && svcO<50;
+    const breaksImplied = retY>50 || retO>50;
+    const dfY=M.serve.you.service_points?M.serve.you.serve_fault_points/M.serve.you.service_points:0;
+    const dfO=M.serve.opp.service_points?M.serve.opp.serve_fault_points/M.serve.opp.service_points:0;
+    const dfHigh = dfY>0.12 || dfO>0.12;
+
+    if(!gameStructured) flags.push({level:"warn",code:"no_game_structure",
+      msg:`This export doesn't encode game structure — serves come in turns of up to ${longest} points, not 4–7-point games (rally-mode doesn't store games, and warm-up/rally segments can be mixed in). Holds, breaks, games, sets, tiebreaks and a clean 1st/2nd-serve split can't be reconstructed from it. Attach the final score to unlock them.`});
+    if(outcomeBiased) flags.push({level:"warn",code:"outcome_truncation",
+      msg:`Rally tracking is incomplete: ${ambigPct}% of points end on an ambiguous "in" ball and the returner hits the last tracked shot ${retLastPct}% of the time. That biases who gets credited the point, so winner counts, the score and service-points-won are low-confidence. Errors (a ball hit out/into the net) and everything measured per shot stay trustworthy.`});
+    if(bothBelow50) flags.push({level:"info",code:"serve_below_50",
+      msg:`Both players "win" under half their service points (${svcY}% / ${svcO}%) — a symptom of the truncation bias above, not real serve-holds.`});
+    if(breaksImplied) flags.push({level:"info",code:"breaks_implied",
+      msg:`Returners win over half their return points, so in match play serve was broken repeatedly and break points certainly occurred — we just can't locate them without a game structure.`});
+    if(dfHigh) flags.push({level:"info",code:"df_inflated",
+      msg:`Double-fault rate looks inflated (${Math.round(dfY*100)}% / ${Math.round(dfO*100)}%): with one serve logged per point, most are single serve-faults, not true doubles.`});
+
+    // Confidence per stat family. Measured-per-shot layer is trustworthy; inferred
+    // outcome/serve/game layer is not, for this export.
+    const reliable = {
+      measured_shots:true,        // per-shot in/out/net, contact, placement
+      placement:true, shot_speed:true, movement:true, shot_quality:true,
+      errors:true,                // net/out endings are definitive
+      serve_in_rate:true,         // did the logged serve land in
+      point_outcomes:!outcomeBiased,
+      winners:!outcomeBiased,     // "in" endings inflate winners when rallies truncate
+      score:!outcomeBiased,
+      service_stats:gameStructured&&!bothBelow50&&!outcomeBiased,
+      first_second_serve:false, double_faults:!dfHigh,
+      break_points:false, games_sets:false, tiebreaks:false
+    };
+    const level = flags.some(f=>f.level==="warn") ? "caution" : "ok";
+    return { level, game_structure_recoverable:gameStructured, outcome_biased:outcomeBiased,
+      ambiguous_end_pct:ambigPct, returner_last_shot_pct:retLastPct,
+      serve_runs:runs.length, avg_serve_run:rnd(avgRun,1), longest_serve_run:longest,
+      both_serve_below_50:bothBelow50, breaks_implied:breaksImplied,
+      df_rate:{you:rnd(dfY*100,0),opp:rnd(dfO*100,0)}, needs_final_score:!gameStructured,
+      reliable, flags };
   }
   root.SVEngine3={build};
 })(typeof window!=="undefined"?window:globalThis);

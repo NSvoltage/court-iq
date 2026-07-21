@@ -413,7 +413,7 @@ function renderAll(){
   renderMovement();renderPositioning();renderReliability();renderPatterns();renderTargeting();renderBrief();renderFoot();
   if(c3init){buildLegend();} // 3D redraws from live M each frame
 }
-function loadInto(m){M=m;byPoint=groupTraj();pointIds=Object.keys(byPoint).map(Number).sort((a,b)=>a-b);scoreByPt=buildScore();replay.idx=Math.max(0,pointIds.findIndex(p=>byPoint[p].length>=8&&byPoint[p].length<=14));replay.shot=0;replay.u=0;renderAll();}
+function loadInto(m){if(!modelUsable(m)){console.warn("refusing to load an incompatible model");return;}M=m;byPoint=groupTraj();pointIds=Object.keys(byPoint).map(Number).sort((a,b)=>a-b);scoreByPt=buildScore();replay.idx=Math.max(0,pointIds.findIndex(p=>byPoint[p].length>=8&&byPoint[p].length<=14));replay.shot=0;replay.u=0;renderAll();}
 function handleFiles(fileList){
   const files=Array.from(fileList||[]); if(!files.length)return;
   let done=0,lastM=null,ok=0,fail=0;
@@ -442,7 +442,8 @@ document.getElementById("lib-cleardemo").onclick=()=>{Career.clearDemo();renderC
 /* ============ CAREER RENDER ============ */
 let careerRecs=[];
 function renderCareer(){careerRecs=Career.load();renderLibrary();renderTrends();renderInsights();}
-function openMatch(id){const full=Career.fullModel(id);if(!full){alert("Full detail for this match isn't cached on this device (older matches are dropped to save space). Re-import its .xlsx to open the match views.");return;}loadInto(full);setMode("match");showView("overview");}
+function modelUsable(m){return !!(m&&m.match&&m.serve&&m.winners_errors&&m.player&&m.targeting&&m.patterns2&&m.quality);}
+function openMatch(id){const full=Career.fullModel(id);if(full&&!modelUsable(full)){alert("That match was analysed by an earlier version of Court IQ. Re-import its .xlsx to open it with the current model.");return;}if(!full){alert("Full detail for this match isn't cached on this device (older matches are dropped to save space). Re-import its .xlsx to open the match views.");return;}loadInto(full);setMode("match");showView("overview");}
 function renderLibrary(){
   const rs=careerRecs, wins=rs.filter(r=>r.win).length, real=rs.filter(r=>!r.demo).length;
   const span=rs.length?rs[0].date_str+" → "+rs[rs.length-1].date_str:"—";

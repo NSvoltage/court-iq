@@ -80,13 +80,29 @@
   // ---- persistence ----
   // localStorage is the source of truth; `mem` is an in-memory fallback so the
   // app still works in sandboxed iframes / private modes where storage throws.
+  // Bump when the model's shape OR the meaning of its metrics changes. Cached full
+  // models and stored metrics from an older engine are not comparable to current
+  // ones — serving them would show stale numbers and crash views whose data blocks
+  // didn't exist yet, so a mismatch resets the store rather than silently mixing.
+  const SCHEMA = 2;
   let mem = null;
-  function blank() { return { records: [], full: {}, order: [] }; }
+  function blank() { return { schema: SCHEMA, records: [], full: {}, order: [] }; }
   function read() {
-    try { const s = JSON.parse(root.localStorage.getItem(KEY)); if (s) return s; } catch (e) {}
+    try {
+      const s = JSON.parse(root.localStorage.getItem(KEY));
+      if (s) {
+        if (s.schema !== SCHEMA) {
+          const fresh = blank(); mem = fresh;
+          try { root.localStorage.setItem(KEY, JSON.stringify(fresh)); } catch (e) {}
+          return fresh;
+        }
+        return s;
+      }
+    } catch (e) {}
     return mem || blank();
   }
   function write(store) {
+    store.schema = SCHEMA;
     mem = store; // in-memory keeps the COMPLETE store (records + full models)
     try { root.localStorage.setItem(KEY, JSON.stringify(store)); return true; }
     catch (e) { // quota (or blocked): shrink a CLONE for storage; never touch `mem`

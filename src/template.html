@@ -810,7 +810,7 @@ function drawPointsList(){
 function courtSVG(box,{w=520,h=560,halfOnly=false,pad=26}={}){
   const yTop=halfOnly?NET:0;const sc=Math.min((w-2*pad)/DBL/2,(h-2*pad)/(BASE-yTop));
   const ox=w/2,oy=pad;const X=x=>ox+x*sc,Yf=y=>oy+(BASE-y)*sc;
-  const svg=el("svg",{viewBox:`0 0 ${w} ${h}`,width:"100%",height:"auto"});svg.style.maxHeight=h+"px";
+  const svg=el("svg",{viewBox:`0 0 ${w} ${h}`,width:"100%"});svg.style.height="auto";svg.style.maxHeight=h+"px";
   const g=el("g");svg.appendChild(g);
   g.appendChild(el("rect",{x:X(-DBL),y:Yf(BASE),width:DBL*2*sc,height:(BASE-yTop)*sc,fill:C.court,rx:4}));
   const L=(a,b,c,d,st={})=>g.appendChild(el("line",Object.assign({x1:X(a),y1:Yf(b),x2:X(c),y2:Yf(d),stroke:C.courtLine,"stroke-width":1.2},st)));
@@ -931,7 +931,7 @@ function renderMovement(){
 function drawCoverage(){
   const box=clear("mv-cov");const W=440,H=250,pad=16,worldW=DBL*2,worldH=NET+2,sc=Math.min((W-2*pad)/worldW,(H-2*pad)/worldH),ox=W/2,oy=H-pad;
   const X=x=>ox+x*sc,Y=y=>oy-(y+2)*sc;
-  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:"auto"});svg.style.maxHeight="270px";
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%"});svg.style.height="auto";svg.style.maxHeight="270px";
   svg.appendChild(el("rect",{x:X(-DBL),y:Y(NET),width:DBL*2*sc,height:(NET+2)*sc,fill:C.court,rx:4}));
   const L=(a,b,c,d,st={})=>svg.appendChild(el("line",Object.assign({x1:X(a),y1:Y(b),x2:X(c),y2:Y(d),stroke:C.courtLine,"stroke-width":1.2},st)));
   L(-DBL,0,DBL,0,{stroke:C.courtNet,"stroke-width":1.8});L(-SGL,0,-SGL,NET);L(SGL,0,SGL,NET);L(-DBL,NET,DBL,NET,{stroke:C.courtNet,"stroke-width":1.6});L(-DBL,0,-DBL,NET);L(DBL,0,DBL,NET);
@@ -1063,7 +1063,7 @@ function drawTargetMap(){
   const X=rx=>ox-rx*sc, Yd=deep=>oyTop+cH*(1-deep);
   const xMin=ox-cW/2,xMax=ox+cW/2,yBot=oyTop+cH;
   const sglA=X(SGL),sglB=X(-SGL),sglL=Math.min(sglA,sglB),sglR=Math.max(sglA,sglB);
-  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:"auto"});svg.style.maxHeight="486px";
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%"});svg.style.height="auto";svg.style.maxHeight="486px";
 
   // ---- tally every groundstroke: in-court cell, or which way it missed ----
   const gs=M.trajectories.filter(t=>t.player===tgState.player&&(t.stroke==="Forehand"||t.stroke==="Backhand")&&typeof t.bx==="number"&&typeof t.by==="number");

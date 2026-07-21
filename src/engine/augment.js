@@ -66,25 +66,26 @@
       recon[winner]++; src[source]=(src[source]||0)+1;
       perPoint.push({pt:p.point,winner,source,conf});
     }
-    // untracked rallies: allocate proportional to tracked reconstructed win-rate
+    // Rallies with no shots logged are counted, never scored. Splitting them by
+    // the tracked win-rate would invent an outcome for a point we have zero
+    // evidence about, and it put the scoreboard out of step with the point count
+    // shown everywhere else. They stay visible as context instead.
     const trackedTotal=recon.you+recon.opp;
     const untracked=Math.max(0,totalRallies-trackedTotal);
-    const allocYou=Math.round(untracked*(recon.you/Math.max(1,trackedTotal)));
-    const allocOpp=untracked-allocYou;
-    const reconFull={you:recon.you+allocYou,opp:recon.opp+allocOpp};
-    const estimated=(src.imputed||0)+(src.winner_soft||0)+untracked;
+    const estimated=(src.imputed||0)+(src.winner_soft||0);
     M.reconstruction={
       measured_certain:src.measured||0,
-      tracked_score:recon, reconstructed_score:reconFull,
-      untracked_allocated:{you:allocYou,opp:allocOpp,total:untracked},
-      sources:{measured:src.measured||0,clear_winner:src.winner_clear||0,soft_winner:src.winner_soft||0,imputed_rally:src.imputed||0,allocated_untracked:untracked},
-      total_points:totalRallies,
-      pct_estimated:pct(estimated,totalRallies),
+      tracked_score:recon, reconstructed_score:recon,
+      untracked_rallies:untracked,
+      sources:{measured:src.measured||0,clear_winner:src.winner_clear||0,soft_winner:src.winner_soft||0,imputed_rally:src.imputed||0,untracked_unscored:untracked},
+      total_points:trackedTotal,
+      rallies_seen:totalRallies,
+      pct_estimated:pct(estimated,trackedTotal),
       per_point:perPoint
     };
     // reconcile the coaching-brief headline to the reconstructed full-match score
     if(M.brief&&M.brief.match_summary){
-      const rs=reconFull, lead=rs.opp>=rs.you?M.meta.opp:M.meta.tracked, hi=Math.max(rs.you,rs.opp), lo=Math.min(rs.you,rs.opp), wp=pct(hi,rs.you+rs.opp);
+      const rs=recon, lead=rs.opp>=rs.you?M.meta.opp:M.meta.tracked, hi=Math.max(rs.you,rs.opp), lo=Math.min(rs.you,rs.opp), wp=pct(hi,rs.you+rs.opp);
       M.brief.match_summary.headline=`${lead} came out ahead ${hi}–${lo} on points. The margin was manufactured almost entirely by ${M.meta.tracked}'s unforced errors, not by the opponent's offense.`;
       M.brief.match_summary.score_context=`Score is reconstructed from tracked points (±${M.integrity?M.integrity.verification.score_uncertainty:0}).`;
     }

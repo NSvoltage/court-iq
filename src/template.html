@@ -114,6 +114,23 @@ canvas{display:block;width:100%;touch-action:none}
 .preplay{appearance:none;border:1px solid var(--line);background:var(--panel2);color:var(--ink2);font-family:inherit;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;transition:.12s}
 .prow:hover .preplay{border-color:var(--accent);color:#fff}
 .pnone{padding:26px 18px;color:var(--muted);font-size:13px}
+/* match library cards */
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:14px}
+.matchcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 16px 14px;cursor:pointer;transition:border-color .14s,transform .14s;display:flex;flex-direction:column;gap:11px}
+.matchcard:hover{border-color:var(--accent);transform:translateY(-2px)}
+.matchcard:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.matchcard.locked{cursor:default}
+.matchcard.locked:hover{border-color:var(--line);transform:none}
+.mc-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.mc-date{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.mc-res{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mc-res.w{color:var(--good)}.mc-res.l{color:var(--opp)}
+.mc-opp{font-size:17px;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.mc-stats{display:flex;gap:16px}
+.mc-stat b{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;display:block;line-height:1.1}
+.mc-stat span{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.mc-cta{margin-top:1px;font-size:12px;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:5px}
+.matchcard.locked .mc-cta{color:var(--muted)}
 /* replay + docked point panel */
 .replay-layout{display:flex;gap:14px;align-items:flex-start}
 .replay-layout .canvas-wrap{flex:1;min-width:0}
@@ -310,11 +327,11 @@ canvas{display:block;width:100%;touch-action:none}
 
     <!-- ===== CAREER MODE ===== -->
     <section class="view" data-v="library">
-      <h2 class="viewhead">Match history</h2>
-      <p class="viewsub">Every match you load is saved in this browser and added to your history. Drop several exports at once. <span class="chip">demo history included — clear it anytime</span></p>
+      <h2 class="viewhead">Your matches</h2>
+      <p class="viewsub"><b style="color:var(--you)">Click a match to open the full analysis</b> — overview, 3D replay, targeting, and the coaching brief. Every match you load is saved in this browser. Drop one or several SwingVision exports to add more. <span class="chip">demo history included — clear it anytime</span></p>
       <div class="grid g4" id="lib-tiles" style="margin-bottom:16px"></div>
-      <div class="ctl"><label>Library</label><div class="seg"><button id="lib-import">⤒ Import career file</button><button id="lib-export">⤓ Export career file</button><button id="lib-cleardemo">Clear demo history</button></div><input type="file" id="careerfile" accept=".json" style="display:none"></div>
-      <div class="card p0" id="lib-list"></div>
+      <div class="ctl"><button class="loadbtn" id="lib-load">⤒ Load match(es)</button><label style="margin-left:6px">Career file</label><div class="seg"><button id="lib-import">⤒ Import</button><button id="lib-export">⤓ Export</button><button id="lib-cleardemo">Clear demo</button></div><input type="file" id="careerfile" accept=".json" style="display:none"></div>
+      <div class="mgrid" id="lib-list"></div>
     </section>
 
     <section class="view" data-v="trends">
@@ -401,6 +418,7 @@ function handleFiles(fileList){
     rd.readAsArrayBuffer(file);});
 }
 document.getElementById("loadbtn").onclick=()=>document.getElementById("fileinput").click();
+document.getElementById("lib-load").onclick=()=>document.getElementById("fileinput").click();
 document.getElementById("fileinput").onchange=e=>{if(e.target.files.length)handleFiles(e.target.files);e.target.value="";};
 const drop=document.getElementById("drop");
 window.addEventListener("dragover",e=>{e.preventDefault();drop.classList.add("on");});
@@ -420,12 +438,26 @@ function renderLibrary(){
   const span=rs.length?rs[0].date_str+" → "+rs[rs.length-1].date_str:"—";
   tiles("lib-tiles",[["Matches",rs.length,"",real+" real · "+(rs.length-real)+" demo"],["Record (recon.)",wins+"–"+(rs.length-wins),wins>=rs.length-wins?"good":"opp","by reconstructed score"],["History span",span,"",""],["Avg shot quality",rs.length?Math.round(rs.reduce((s,r)=>s+(r.metrics.shot_quality||0),0)/rs.length):"—","you","across all matches"]]);
   const box=clear("lib-list");
+  const openable=new Set(Career.fullIds());
   careerRecs.slice().reverse().forEach(r=>{
-    const row=mk("div");row.style.cssText="display:grid;grid-template-columns:104px 1fr 96px 92px 150px 24px;gap:10px;align-items:center;padding:12px 16px;border-top:1px solid var(--line);font-size:13px;cursor:pointer";
-    row.onmouseenter=()=>row.style.background="var(--panel2)";row.onmouseleave=()=>row.style.background="";
-    const res=r.win?`<span style="color:var(--good);font-weight:700">W</span>`:`<span style="color:var(--opp);font-weight:700">L</span>`;
-    row.innerHTML=`<span style="color:var(--ink2);font-variant-numeric:tabular-nums">${r.date_str}</span><span>vs <b>${r.opponent}</b>${r.demo?' <span class="chip" style="padding:1px 7px;margin-left:4px">demo</span>':''}</span><span style="font-variant-numeric:tabular-nums">${res} ${r.score.you}–${r.score.opp}</span><span class="chip" style="padding:2px 8px">${r.pct_estimated}% est</span><span style="color:var(--muted);font-variant-numeric:tabular-nums">Q ${r.metrics.shot_quality} · ${r.metrics.serve_avg_mph}mph</span><span style="color:var(--muted);text-align:right">›</span>`;
-    row.onclick=()=>openMatch(r.id);box.appendChild(row);
+    const canOpen=openable.has(r.id);
+    const card=mk("div","matchcard"+(canOpen?"":" locked"));
+    if(canOpen){card.tabIndex=0;card.setAttribute("role","button");}
+    const resCls=r.win?"w":"l",res=(r.win?"W ":"L ")+r.score.you+"–"+r.score.opp;
+    const demoChip=r.demo?'<span class="chip" style="padding:1px 8px;margin:0">demo</span>':'';
+    const cta=canOpen?'Open match <span style="font-size:14px">→</span>':(r.demo?'Demo — summary only':'Reload the .xlsx to open');
+    card.innerHTML=`
+      <div class="mc-head"><span class="mc-date">${r.date_str}</span><span class="mc-res ${resCls}">${res}</span></div>
+      <div class="mc-opp">vs ${r.opponent} ${demoChip}</div>
+      <div class="mc-stats">
+        <div class="mc-stat"><b>${r.points}</b><span>points</span></div>
+        <div class="mc-stat"><b>${r.metrics.shot_quality??"—"}</b><span>shot Q</span></div>
+        <div class="mc-stat"><b>${r.metrics.serve_avg_mph??"—"}</b><span>serve mph</span></div>
+        <div class="mc-stat"><b>${r.metrics.avg_rally??"—"}</b><span>avg rally</span></div>
+      </div>
+      <div class="mc-cta">${cta}</div>`;
+    if(canOpen){card.onclick=()=>openMatch(r.id);card.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openMatch(r.id);}};}
+    box.appendChild(card);
   });
 }
 function renderTrends(){
@@ -1127,5 +1159,5 @@ loadModel(window.SAMPLE_RAW);
     }
   }catch(e){console.warn("career init",e);}
 })();
-setMode("match");
+setMode("career");
 </script>

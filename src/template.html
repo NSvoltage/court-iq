@@ -1050,61 +1050,93 @@ function renderTargeting(){
 }
 function drawTargetMap(){
   const box=clear("tg-map"),tg=M.targeting[tgState.player],recv=otherK(tgState.player),hand=tgState.hand[recv],col=colOf(tgState.player);
-  const W=440,H=452,padX=26,padTop=88,padBot=32; // top room for figure + labels + "long" out-band
-  const worldW=DBL*2,worldH=BASE-NET; // one half-court, net→baseline
-  const sc=Math.min((W-2*padX)/worldW,(H-padTop-padBot)/worldH);
-  const cW=worldW*sc,cH=worldH*sc,ox=W/2,oyTop=padTop; // opponent baseline at top, net at bottom
-  // View = you looking across the net at the opponent. Flip x so the opponent's OWN
-  // right/left match how you'd see them face-on: rx>0 (their right) draws on the left.
-  const X=rx=>ox-rx*sc;
-  const Yd=deep=>oyTop+cH*(1-deep);         // deep=1 their baseline(top), 0 net(bottom)
-  const RX=[X(-DBL),X(DBL)],xMin=Math.min(RX[0],RX[1]),xMax=Math.max(RX[0],RX[1]);
-  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:"auto"});svg.style.maxHeight="450px";
-  // court surface
-  svg.appendChild(el("rect",{x:xMin,y:oyTop,width:cW,height:cH,fill:C.court,rx:4}));
+  // Court is inset so the OUT regions get their own boxes: long above the
+  // baseline, wide down each side, into-the-net below. Everything is a share of
+  // the same total, so in-vs-out reads directly off the map.
+  const W=470,H=486,padX=16,padTop=86,padBot=34,bandW=38,bandH=27;
+  const worldW=DBL*2,worldH=BASE-NET;
+  const sc=Math.min((W-2*padX-2*bandW)/worldW,(H-padTop-padBot-2*bandH)/worldH);
+  const cW=worldW*sc,cH=worldH*sc,ox=W/2,oyTop=padTop+bandH;
+  const X=rx=>ox-rx*sc, Yd=deep=>oyTop+cH*(1-deep);
+  const xMin=ox-cW/2,xMax=ox+cW/2,yBot=oyTop+cH;
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:"auto"});svg.style.maxHeight="500px";
+
+  // ---- tally every groundstroke into an in-court cell or an out region ----
+  const gs=M.trajectories.filter(t=>t.player===tgState.player&&(t.stroke==="Forehand"||t.stroke==="Backhand")&&typeof t.bx==="number"&&typeof t.by==="number");
+  const grid=[[0,0,0],[0,0,0],[0,0,0]],outs={long:0,wideL:0,wideR:0,net:0};
+  let nIn=0;
+  gs.forEach(t=>{
+    const far=t.by>NET,rx=far?-t.bx:t.bx,deep=(far?(t.by-NET):(NET-t.by))/(BASE-NET),lat=Math.abs(t.bx);
+    if(t.result==="Net"){outs.net++;return;}
+    if(t.result==="Out"){
+      if(deep>1.0){outs.long++;return;}
+      if(lat>SGL){if(X(rx)<ox)outs.wideL++;else outs.wideR++;return;}
+      outs.long++;return;
+    }
+    nIn++;
+    grid[deep>0.66?0:deep>0.33?1:2][rx< -SGL/3?0:rx>SGL/3?2:1]++;
+  });
+  const tot=gs.length||1, shr=n=>Math.round(100*n/tot);
   const zones=tgState.map==="zones";
-  if(zones){ // zone shading (3 lateral bands × 3 depth bands), from live grid
+
+  // ---- court surface + out bands ----
+  svg.appendChild(el("rect",{x:xMin,y:oyTop,width:cW,height:cH,fill:C.court||"#12293e",rx:4}));
+  const band=(x,y,w,h,n,lab,vert)=>{
+    const mx=Math.max(1,outs.long,outs.wideL,outs.wideR,outs.net);
+    svg.appendChild(el("rect",{x,y,width:w,height:h,rx:5,fill:C.bad,"fill-opacity":zones?(0.07+0.5*(n/mx)).toFixed(3):0.05,stroke:C.line,"stroke-width":1,"stroke-dasharray":"3 3"}));
+    if(!zones)return;
+    const cx=x+w/2,cy=y+h/2;
+    if(vert){ // tall side band — stack the figures
+      svg.appendChild(T(cx,cy-4,n,{"text-anchor":"middle",fill:n?C.bad:C.muted,"font-size":13,"font-weight":800}));
+      svg.appendChild(T(cx,cy+9,shr(n)+"%",{"text-anchor":"middle",fill:C.muted,"font-size":9.5}));
+      svg.appendChild(T(cx,cy+22,lab,{"text-anchor":"middle",fill:C.muted,"font-size":8.5,"letter-spacing":".06em"}));
+    } else {  // short horizontal band — one line so nothing collides
+      svg.appendChild(T(cx,cy+4,`${lab}  ${n} · ${shr(n)}%`,{"text-anchor":"middle",fill:n?C.bad:C.muted,"font-size":11.5,"font-weight":800,"letter-spacing":".04em"}));
+    }
+  };
+  band(xMin,oyTop-bandH-2,cW,bandH,outs.long,"LONG",false);
+  band(xMin,yBot+2,cW,bandH,outs.net,"NET",false);
+  band(xMin-bandW-2,oyTop,bandW,cH,outs.wideL,"WIDE",true);
+  band(xMax+2,oyTop,bandW,cH,outs.wideR,"WIDE",true);
+
+  // ---- in-court cells ----
+  if(zones){
     const colE=[-DBL,-SGL/3,SGL/3,DBL],depE=[1,0.66,0.33,0];
-    const maxp=Math.max(1,...tg.grid.flat().map(z=>z.pct));
-    for(let r=0;r<3;r++)for(let c=0;c<3;c++){const z=tg.grid[r][c];
-      const xa=X(colE[c]),xb=X(colE[c+1]),y0=Yd(depE[r]),y1=Yd(depE[r+1]),x0=Math.min(xa,xb);
-      svg.appendChild(el("rect",{x:x0,y:y0,width:Math.abs(xb-xa),height:y1-y0,fill:col,"fill-opacity":(0.06+0.8*(z.pct/maxp)).toFixed(3)}));
-      if(z.pct>=2){svg.appendChild(T((xa+xb)/2,(y0+y1)/2-1,z.pct+"%",{"text-anchor":"middle",fill:"#fff","font-size":15,"font-weight":800}));
-        svg.appendChild(T((xa+xb)/2,(y0+y1)/2+13,z.n,{"text-anchor":"middle",fill:"rgba(255,255,255,.6)","font-size":9.5}));}}
+    const maxc=Math.max(1,...grid.reduce((a,r)=>a.concat(r),[]));
+    for(let r=0;r<3;r++)for(let c=0;c<3;c++){
+      const n=grid[r][c],xa=X(colE[c]),xb=X(colE[c+1]),y0=Yd(depE[r]),y1=Yd(depE[r+1]),x0=Math.min(xa,xb);
+      svg.appendChild(el("rect",{x:x0,y:y0,width:Math.abs(xb-xa),height:y1-y0,fill:col,"fill-opacity":(0.06+0.78*(n/maxc)).toFixed(3)}));
+      if(shr(n)>=1){svg.appendChild(T((xa+xb)/2,(y0+y1)/2-1,shr(n)+"%",{"text-anchor":"middle",fill:"#fff","font-size":14,"font-weight":800}));
+        svg.appendChild(T((xa+xb)/2,(y0+y1)/2+13,n,{"text-anchor":"middle",fill:"rgba(255,255,255,.62)","font-size":9.5}));}
+    }
   }
-  // court lines
+
+  // ---- court lines ----
   const L=(a,b,c,d,st={})=>svg.appendChild(el("line",Object.assign({x1:X(a),y1:Yd(b),x2:X(c),y2:Yd(d),stroke:C.courtLine,"stroke-width":1.1},st)));
   const svcDeep=6.4/(BASE-NET);
   L(-DBL,1,DBL,1);L(-SGL,1,-SGL,0);L(SGL,1,SGL,0);L(-DBL,1,-DBL,0);L(DBL,1,DBL,0);
   L(-SGL,svcDeep,SGL,svcDeep);L(0,svcDeep,0,0);
-  L(-0.35,1,0.35,1,{stroke:C.courtLine});
-  svg.appendChild(el("line",{x1:xMin,y1:Yd(0),x2:xMax,y2:Yd(0),stroke:C.courtNet,"stroke-width":2.4})); // net
-  // opponent figure + wing labels (drawn first so dots sit on top)
-  drawOppFigure(svg,ox,20,hand,recv);
-  const fhX=hand==="R"?X(SGL*0.62):X(-SGL*0.62),bhX=hand==="R"?X(-SGL*0.62):X(SGL*0.62);
-  svg.appendChild(T(fhX,52,`${disp(recv)} forehand`,{"text-anchor":"middle",fill:TGC.fh,"font-size":11.5,"font-weight":700}));
-  svg.appendChild(T(bhX,52,`${disp(recv)} backhand`,{"text-anchor":"middle",fill:TGC.bh,"font-size":11.5,"font-weight":700}));
-  // outcome dots. Winners land IN the court. Errors are placed by their MEASURED result,
-  // NOT the raw bounce coord: a net ball's recorded "bounce" is a phantom point mid-court,
-  // so we show net errors at the net, long balls past the baseline, wide balls past the sideline.
-  let bottomCap=`top = ${disp(recv)}'s baseline (deep) · bottom = net (you hit from below)`;
+  L(-0.35,1,0.35,1,{stroke:C.courtNet});
+  svg.appendChild(el("line",{x1:xMin,y1:Yd(0),x2:xMax,y2:Yd(0),stroke:C.courtNet,"stroke-width":2.4}));
+
+  // ---- shot dots (non-zone modes) ----
+  let bottomCap=`${shr(nIn)}% landed in · ${shr(tot-nIn)}% missed — ${tot} groundstrokes`;
   if(!zones){
-    const mode=tgState.map; // "inout" | "winner" | "error"
-    // one rule for every ball: place it by what MEASURABLY happened to it
+    const mode=tgState.map;
     const place=t=>{
       const far=t.by>NET,rx=far?-t.bx:t.bx,deep=(far?(t.by-NET):(NET-t.by))/(BASE-NET),lat=Math.abs(t.bx);
-      if(t.result==="Net")return{cx:clip(X(rx),xMin+6,xMax-6),cy:Yd(0)+9,k:"net",why:"into the net"};
+      if(t.result==="Net")return{cx:clip(X(rx),xMin+6,xMax-6),cy:yBot+2+bandH/2,k:"net",why:"into the net"};
       if(t.result==="Out"){
-        if(deep>1.0)return{cx:clip(X(rx),xMin+6,xMax-6),cy:oyTop-9,k:"long",why:"long — past the baseline"};
-        if(lat>SGL)return{cx:(X(rx)<ox?xMin-9:xMax+9),cy:clip(Yd(clip(deep,0,1)),oyTop+8,oyTop+cH-8),k:"wide",why:"wide — past the sideline"};
-        return{cx:clip(X(rx),xMin+4,xMax-4),cy:clip(Yd(clip(deep,0,1)),oyTop+4,oyTop+cH-4),k:"out",why:"out"};
+        if(deep>1.0)return{cx:clip(X(rx),xMin+6,xMax-6),cy:oyTop-2-bandH/2,k:"long",why:"long — past the baseline"};
+        if(lat>SGL)return{cx:(X(rx)<ox?xMin-2-bandW/2:xMax+2+bandW/2),cy:clip(Yd(clip(deep,0,1)),oyTop+8,yBot-8),k:"wide",why:"wide — past the sideline"};
+        return{cx:clip(X(rx),xMin+4,xMax-4),cy:oyTop-2-bandH/2,k:"long",why:"out"};
       }
-      return{cx:clip(X(rx),xMin+4,xMax-4),cy:clip(Yd(clip(deep,0,1)),oyTop+4,oyTop+cH-4),k:"in",why:"landed in"};
+      return{cx:clip(X(rx),xMin+4,xMax-4),cy:clip(Yd(clip(deep,0,1)),oyTop+4,yBot-4),k:"in",why:"landed in"};
     };
     const isGS=t=>t.player===tgState.player&&(t.stroke==="Forehand"||t.stroke==="Backhand")&&typeof t.bx==="number"&&typeof t.by==="number";
     const dots=M.trajectories.filter(mode==="inout"?isGS:(t=>isGS(t)&&t.outcome===mode));
     const shotCol=t=>mode==="inout"?(t.result==="In"?C.good:t.result==="Net"?C.warn:C.bad):(mode==="winner"?C.good:C.bad);
-    const tally={in:0,net:0,long:0,wide:0,out:0};
+    const tally={in:0,net:0,long:0,wide:0};
     dots.forEach(t=>{
       const pos=place(t),cc=shotCol(t);tally[pos.k]++;
       const c=el("circle",{cx:pos.cx,cy:pos.cy,r:mode==="inout"?3:3.8,fill:cc,"fill-opacity":mode==="inout"?.5:.62,stroke:cc,"stroke-width":mode==="inout"?.8:1});
@@ -1112,12 +1144,16 @@ function drawTargetMap(){
       c.addEventListener("mousemove",e=>tip(`<b>${disp(t.player)} ${t.stroke}</b><br><span class="mut">${pos.why} · ${t.dir} · ${t.spd} mph</span>`,e.clientX,e.clientY));
       c.addEventListener("mouseleave",untip);svg.appendChild(c);
     });
-    bottomCap=mode==="inout"
-      ? `${tally.in} landed in · ${tally.long} long · ${tally.wide+tally.out} wide · ${tally.net} net — every groundstroke`
-      : mode==="winner" ? `${dots.length} winners — where they landed`
-      : `${tally.net} into the net · ${tally.long} long · ${tally.wide+tally.out} wide`;
+    bottomCap=mode==="inout"?`${tally.in} in · ${tally.long} long · ${tally.wide} wide · ${tally.net} net`
+      :mode==="winner"?`${dots.length} winners — where they landed`
+      :`${tally.net} net · ${tally.long} long · ${tally.wide} wide`;
   }
-  svg.appendChild(T(ox,H-9,bottomCap,{"text-anchor":"middle",fill:C.muted,"font-size":10}));
+
+  drawOppFigure(svg,ox,18,hand,recv);
+  const leftIsBH=hand==="R";
+  svg.appendChild(T(X(-SGL*0.62),70,(leftIsBH?"◀ Backhand":"◀ Forehand"),{"text-anchor":"middle",fill:leftIsBH?TGC.bh:TGC.fh,"font-size":11.5,"font-weight":700}));
+  svg.appendChild(T(X(SGL*0.62),70,(leftIsBH?"Forehand ▶":"Backhand ▶"),{"text-anchor":"middle",fill:leftIsBH?TGC.fh:TGC.bh,"font-size":11.5,"font-weight":700}));
+  svg.appendChild(T(ox,H-8,bottomCap,{"text-anchor":"middle",fill:C.muted,"font-size":10}));
   box.appendChild(svg);
 }
 function drawOppFigure(svg,cx,cy,hand,recv){
@@ -1238,7 +1274,10 @@ const replay={idx:0,shot:0,u:0,playing:true,speed:0.9,_hold:0};
 function groupTraj(){const m={};M.trajectories.forEach(t=>{(m[t.pt]=m[t.pt]||[]).push(t);});for(const k in m)m[k].sort((a,b)=>a.i-b.i);return m;}
 function currentPid(){return pointIds[replay.idx];}
 function ensure3D(){if(c3init)return;c3init=true;setup3D();}
-function jumpToReplay(pid){const idx=pointIds.indexOf(pid);if(idx<0)return;document.querySelectorAll(".tab").forEach(t=>t.classList.remove("on"));document.querySelector('.tab[data-view="court3d"]').classList.add("on");document.querySelectorAll("section.view").forEach(s=>s.classList.toggle("on",s.dataset.v==="court3d"));ensure3D();setTimeout(()=>{replay.idx=idx;replay.shot=0;replay.u=0;replay.playing=true;setPlay();setReplayPanel(true);updateRepLabel();syncReplaySide();window.scrollTo({top:0,behavior:"smooth"});},40);}
+function jumpToReplay(pid){const idx=pointIds.indexOf(pid);if(idx<0)return;
+  if(appMode!=="match")setMode("match"); // career nav has no match tabs
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("on"));
+  const tab=document.querySelector('.tab[data-view="court3d"]');if(tab)tab.classList.add("on");document.querySelectorAll("section.view").forEach(s=>s.classList.toggle("on",s.dataset.v==="court3d"));ensure3D();setTimeout(()=>{replay.idx=idx;replay.shot=0;replay.u=0;replay.playing=true;setPlay();setReplayPanel(true);updateRepLabel();syncReplaySide();window.scrollTo({top:0,behavior:"smooth"});},40);}
 function setup3D(){
   c3canvas=document.getElementById("court3d");const wrap=c3canvas.parentElement;
   function size(){const w=wrap.clientWidth;c3canvas.width=w*devicePixelRatio;c3canvas.height=580*devicePixelRatio;c3canvas.style.height="580px";c3ctx=c3canvas.getContext("2d");c3ctx.scale(devicePixelRatio,devicePixelRatio);cam.cx=w/2;cam.cy=340;}

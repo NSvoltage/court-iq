@@ -1053,26 +1053,27 @@ function renderTargeting(){
 }
 function drawTargetMap(){
   const box=clear("tg-map"),tg=M.targeting[tgState.player],recv=otherK(tgState.player),hand=tgState.hand[recv],col=colOf(tgState.player);
-  // Court is inset so the OUT regions get their own boxes: long above the
-  // baseline, wide down each side, into-the-net below. Everything is a share of
-  // the same total, so in-vs-out reads directly off the map.
-  const W=470,H=486,padX=16,padTop=86,padBot=34,bandW=38,bandH=27;
+  // SINGLES court: the doubles alleys are OUT, so they serve as the wide-miss
+  // zones rather than being drawn as in-play. In-court cells span the singles
+  // width only; long sits above the baseline and net below.
+  const W=470,H=470,padX=16,padTop=84,padBot=32,bandH=27;
   const worldW=DBL*2,worldH=BASE-NET;
-  const sc=Math.min((W-2*padX-2*bandW)/worldW,(H-padTop-padBot-2*bandH)/worldH);
+  const sc=Math.min((W-2*padX)/worldW,(H-padTop-padBot-2*bandH)/worldH);
   const cW=worldW*sc,cH=worldH*sc,ox=W/2,oyTop=padTop+bandH;
   const X=rx=>ox-rx*sc, Yd=deep=>oyTop+cH*(1-deep);
   const xMin=ox-cW/2,xMax=ox+cW/2,yBot=oyTop+cH;
-  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:"auto"});svg.style.maxHeight="500px";
+  const sglA=X(SGL),sglB=X(-SGL),sglL=Math.min(sglA,sglB),sglR=Math.max(sglA,sglB);
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:"auto"});svg.style.maxHeight="486px";
 
-  // ---- tally every groundstroke into an in-court cell or an out region ----
+  // ---- tally every groundstroke: in-court cell, or which way it missed ----
   const gs=M.trajectories.filter(t=>t.player===tgState.player&&(t.stroke==="Forehand"||t.stroke==="Backhand")&&typeof t.bx==="number"&&typeof t.by==="number");
   const grid=[[0,0,0],[0,0,0],[0,0,0]],outs={long:0,wideL:0,wideR:0,net:0};
   let nIn=0;
   gs.forEach(t=>{
     const far=t.by>NET,rx=far?-t.bx:t.bx,deep=(far?(t.by-NET):(NET-t.by))/(BASE-NET),lat=Math.abs(t.bx);
     if(t.result==="Net"){outs.net++;return;}
-    if(t.result==="Out"){
-      if(deep>1.0){outs.long++;return;}
+    if(t.result==="Out"||lat>SGL){                 // singles: the alley is out
+      if(deep>1.0){outs.long++;return;}             // past the baseline = a depth miss
       if(lat>SGL){if(X(rx)<ox)outs.wideL++;else outs.wideR++;return;}
       outs.long++;return;
     }
@@ -1081,30 +1082,28 @@ function drawTargetMap(){
   });
   const tot=gs.length||1, shr=n=>Math.round(100*n/tot);
   const zones=tgState.map==="zones";
+  const outMax=Math.max(1,outs.long,outs.wideL,outs.wideR,outs.net);
+  const outFill=n=>zones?(0.07+0.5*(n/outMax)).toFixed(3):0.05;
 
-  // ---- court surface + out bands ----
-  svg.appendChild(el("rect",{x:xMin,y:oyTop,width:cW,height:cH,fill:C.court||"#12293e",rx:4}));
-  const band=(x,y,w,h,n,lab,vert)=>{
-    const mx=Math.max(1,outs.long,outs.wideL,outs.wideR,outs.net);
-    svg.appendChild(el("rect",{x,y,width:w,height:h,rx:5,fill:C.bad,"fill-opacity":zones?(0.07+0.5*(n/mx)).toFixed(3):0.05,stroke:C.line,"stroke-width":1,"stroke-dasharray":"3 3"}));
-    if(!zones)return;
-    const cx=x+w/2,cy=y+h/2;
-    if(vert){ // tall side band — stack the figures
-      svg.appendChild(T(cx,cy-4,shr(n)+"%",{"text-anchor":"middle",fill:n?C.bad:C.muted,"font-size":13,"font-weight":800}));
-      svg.appendChild(T(cx,cy+9,n,{"text-anchor":"middle",fill:C.muted,"font-size":9.5}));
-      svg.appendChild(T(cx,cy+22,lab,{"text-anchor":"middle",fill:C.muted,"font-size":8.5,"letter-spacing":".06em"}));
-    } else {  // short horizontal band — one line so nothing collides
-      svg.appendChild(T(cx,cy+4,`${lab}  ${shr(n)}% · ${n}`,{"text-anchor":"middle",fill:n?C.bad:C.muted,"font-size":11.5,"font-weight":800,"letter-spacing":".04em"}));
-    }
+  // ---- surface: singles box in play, alleys shaded as out ----
+  svg.appendChild(el("rect",{x:xMin,y:oyTop,width:cW,height:cH,fill:C.court,rx:4}));
+  svg.appendChild(el("rect",{x:xMin,y:oyTop,width:sglL-xMin,height:cH,fill:C.bad,"fill-opacity":outFill(outs.wideL)}));
+  svg.appendChild(el("rect",{x:sglR,y:oyTop,width:xMax-sglR,height:cH,fill:C.bad,"fill-opacity":outFill(outs.wideR)}));
+  const hband=(y,n,lab)=>{
+    svg.appendChild(el("rect",{x:xMin,y,width:cW,height:bandH,rx:5,fill:C.bad,"fill-opacity":outFill(n),stroke:C.line,"stroke-width":1,"stroke-dasharray":"3 3"}));
+    if(zones)svg.appendChild(T(ox,y+bandH/2+4,`${lab}  ${shr(n)}% · ${n}`,{"text-anchor":"middle",fill:n?C.bad:C.muted,"font-size":11.5,"font-weight":800,"letter-spacing":".04em"}));
   };
-  band(xMin,oyTop-bandH-2,cW,bandH,outs.long,"LONG",false);
-  band(xMin,yBot+2,cW,bandH,outs.net,"NET",false);
-  band(xMin-bandW-2,oyTop,bandW,cH,outs.wideL,"WIDE",true);
-  band(xMax+2,oyTop,bandW,cH,outs.wideR,"WIDE",true);
+  hband(oyTop-bandH-2,outs.long,"LONG");
+  hband(yBot+2,outs.net,"NET");
+  if(zones){[[(xMin+sglL)/2,outs.wideL],[(sglR+xMax)/2,outs.wideR]].forEach(([cx,n])=>{
+    const cy=oyTop+cH/2;
+    svg.appendChild(T(cx,cy-4,shr(n)+"%",{"text-anchor":"middle",fill:n?C.bad:C.muted,"font-size":12,"font-weight":800}));
+    svg.appendChild(T(cx,cy+9,n,{"text-anchor":"middle",fill:C.muted,"font-size":9.5}));
+    svg.appendChild(T(cx,cy+22,"WIDE",{"text-anchor":"middle",fill:C.muted,"font-size":8.5,"letter-spacing":".06em"}));});}
 
-  // ---- in-court cells ----
+  // ---- in-court cells: singles width only ----
   if(zones){
-    const colE=[-DBL,-SGL/3,SGL/3,DBL],depE=[1,0.66,0.33,0];
+    const colE=[-SGL,-SGL/3,SGL/3,SGL],depE=[1,0.66,0.33,0];
     const maxc=Math.max(1,...grid.reduce((a,r)=>a.concat(r),[]));
     for(let r=0;r<3;r++)for(let c=0;c<3;c++){
       const n=grid[r][c],xa=X(colE[c]),xb=X(colE[c+1]),y0=Yd(depE[r]),y1=Yd(depE[r+1]),x0=Math.min(xa,xb);
@@ -1117,28 +1116,29 @@ function drawTargetMap(){
   // ---- court lines ----
   const L=(a,b,c,d,st={})=>svg.appendChild(el("line",Object.assign({x1:X(a),y1:Yd(b),x2:X(c),y2:Yd(d),stroke:C.courtLine,"stroke-width":1.1},st)));
   const svcDeep=6.4/(BASE-NET);
-  L(-DBL,1,DBL,1);L(-SGL,1,-SGL,0);L(SGL,1,SGL,0);L(-DBL,1,-DBL,0);L(DBL,1,DBL,0);
+  L(-DBL,1,DBL,1);L(-DBL,1,-DBL,0);L(DBL,1,DBL,0);
+  L(-SGL,1,-SGL,0,{"stroke-width":1.8});L(SGL,1,SGL,0,{"stroke-width":1.8}); // singles = the real boundary
   L(-SGL,svcDeep,SGL,svcDeep);L(0,svcDeep,0,0);
   L(-0.35,1,0.35,1,{stroke:C.courtNet});
   svg.appendChild(el("line",{x1:xMin,y1:Yd(0),x2:xMax,y2:Yd(0),stroke:C.courtNet,"stroke-width":2.4}));
 
-  // ---- shot dots (non-zone modes) ----
-  let bottomCap=`${shr(nIn)}% landed in · ${shr(tot-nIn)}% missed — ${tot} groundstrokes`;
+  // ---- shot dots ----
+  let bottomCap=`${shr(nIn)}% landed in · ${shr(tot-nIn)}% missed — ${tot} groundstrokes (singles court)`;
   if(!zones){
     const mode=tgState.map;
     const place=t=>{
       const far=t.by>NET,rx=far?-t.bx:t.bx,deep=(far?(t.by-NET):(NET-t.by))/(BASE-NET),lat=Math.abs(t.bx);
       if(t.result==="Net")return{cx:clip(X(rx),xMin+6,xMax-6),cy:yBot+2+bandH/2,k:"net",why:"into the net"};
-      if(t.result==="Out"){
+      if(t.result==="Out"||lat>SGL){
         if(deep>1.0)return{cx:clip(X(rx),xMin+6,xMax-6),cy:oyTop-2-bandH/2,k:"long",why:"long — past the baseline"};
-        if(lat>SGL)return{cx:(X(rx)<ox?xMin-2-bandW/2:xMax+2+bandW/2),cy:clip(Yd(clip(deep,0,1)),oyTop+8,yBot-8),k:"wide",why:"wide — past the sideline"};
-        return{cx:clip(X(rx),xMin+4,xMax-4),cy:oyTop-2-bandH/2,k:"long",why:"out"};
+        if(lat>SGL){const l=X(rx)<ox;return{cx:l?(xMin+sglL)/2:(sglR+xMax)/2,cy:clip(Yd(clip(deep,0,1)),oyTop+8,yBot-8),k:"wide",why:"wide — past the singles sideline"};}
+        return{cx:clip(X(rx),xMin+6,xMax-6),cy:oyTop-2-bandH/2,k:"long",why:"out"};
       }
-      return{cx:clip(X(rx),xMin+4,xMax-4),cy:clip(Yd(clip(deep,0,1)),oyTop+4,yBot-4),k:"in",why:"landed in"};
+      return{cx:clip(X(rx),sglL+4,sglR-4),cy:clip(Yd(clip(deep,0,1)),oyTop+4,yBot-4),k:"in",why:"landed in"};
     };
     const isGS=t=>t.player===tgState.player&&(t.stroke==="Forehand"||t.stroke==="Backhand")&&typeof t.bx==="number"&&typeof t.by==="number";
     const dots=M.trajectories.filter(mode==="inout"?isGS:(t=>isGS(t)&&t.outcome===mode));
-    const shotCol=t=>mode==="inout"?(t.result==="In"?C.good:t.result==="Net"?C.warn:C.bad):(mode==="winner"?C.good:C.bad);
+    const shotCol=t=>mode==="inout"?(t.result==="In"&&Math.abs(t.bx)<=SGL?C.good:t.result==="Net"?C.warn:C.bad):(mode==="winner"?C.good:C.bad);
     const tally={in:0,net:0,long:0,wide:0};
     dots.forEach(t=>{
       const pos=place(t),cc=shotCol(t);tally[pos.k]++;
@@ -1154,8 +1154,8 @@ function drawTargetMap(){
 
   drawOppFigure(svg,ox,18,hand,recv);
   const leftIsBH=hand==="R";
-  svg.appendChild(T(X(-SGL*0.62),70,(leftIsBH?"◀ Backhand":"◀ Forehand"),{"text-anchor":"middle",fill:leftIsBH?TGC.bh:TGC.fh,"font-size":11.5,"font-weight":700}));
-  svg.appendChild(T(X(SGL*0.62),70,(leftIsBH?"Forehand ▶":"Backhand ▶"),{"text-anchor":"middle",fill:leftIsBH?TGC.fh:TGC.bh,"font-size":11.5,"font-weight":700}));
+  svg.appendChild(T(X(-SGL*0.62),68,(leftIsBH?"◀ Backhand":"◀ Forehand"),{"text-anchor":"middle",fill:leftIsBH?TGC.bh:TGC.fh,"font-size":11.5,"font-weight":700}));
+  svg.appendChild(T(X(SGL*0.62),68,(leftIsBH?"Forehand ▶":"Backhand ▶"),{"text-anchor":"middle",fill:leftIsBH?TGC.fh:TGC.bh,"font-size":11.5,"font-weight":700}));
   svg.appendChild(T(ox,H-8,bottomCap,{"text-anchor":"middle",fill:C.muted,"font-size":10}));
   box.appendChild(svg);
 }

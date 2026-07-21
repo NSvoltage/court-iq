@@ -11,7 +11,7 @@ your match history all run in your browser. **No server, no account, no upload.*
 Your data never leaves your machine.
 
 <p align="center">
-  <img src="media/overview.png" width="90%" alt="Court IQ match overview — scoreboard, what decided it, and the full statline">
+  <img src="media/demo.gif" width="90%" alt="Court IQ tour — match overview, point log, 3D rally replay, targeting map and coaching brief">
 </p>
 
 ---
@@ -45,8 +45,14 @@ from disk (`file://…`), email it to yourself, or drop it on any static host.
    (`Settings`, `Shots` and `Rallies` sheets).
 3. Click **Load match(es)** in Court IQ, or drag the file onto the page.
 
-Load several files at once to build up history. A sample match ships with the
-app so you can explore before loading your own.
+Load several files at once to build up history. A sample match is built into the
+app so there's something to look at on first open.
+
+**Want to exercise the real path?** [`examples/sample-match.xlsx`](examples/sample-match.xlsx)
+is an anonymised SwingVision export — drop it on the page exactly as you would
+your own file. It's the same match that's built in, so you can confirm the
+`.xlsx` route lands in the same place (there's a test that checks precisely
+that).
 
 > **Singles vs. doubles.** The export has no singles/doubles flag, so Court IQ
 > assumes **singles** — the doubles alleys are drawn and counted as out. For a
@@ -79,8 +85,8 @@ app so you can explore before loading your own.
   (e.g. chronic over-hitting).
 
 <p align="center">
+  <img src="media/overview.png" width="49%" alt="Match overview — scoreboard, what decided it, and the full statline">
   <img src="media/targeting.png" width="49%" alt="Targeting — placement map and shot selection by wing">
-  <img src="media/replay.png" width="49%" alt="3D rally replay">
   <img src="media/points.png" width="49%" alt="Point-by-point log">
   <img src="media/trends.png" width="49%" alt="Trends over time">
 </p>

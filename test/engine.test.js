@@ -62,6 +62,21 @@ test('targeting: placement distribution + segments', () => {
   assert.ok(M.targeting.segment_labels[2].to >= M.targeting.segment_labels[0].to);
 });
 
+test('verification judges stat-family confidence', () => {
+  const v = M.verification;
+  assert.equal(typeof v.level, 'string');
+  assert.ok(Array.isArray(v.flags));
+  // this export has no game structure and biased outcome attribution
+  assert.equal(v.game_structure_recoverable, false);
+  assert.equal(v.reliable.break_points, false);
+  assert.equal(v.reliable.games_sets, false);
+  // measured layer stays trustworthy; inferred outcome layer flagged
+  assert.equal(v.reliable.measured_shots, true);
+  assert.equal(v.reliable.errors, true);
+  assert.ok(v.ambiguous_end_pct >= 0 && v.ambiguous_end_pct <= 100);
+  assert.ok(v.flags.some((f) => f.code === 'no_game_structure'));
+});
+
 test('per-shot trajectories carry coords + quality', () => {
   assert.ok(M.trajectories.length > 500);
   const t = M.trajectories.find((x) => x.result === 'In' && (x.stroke === 'Forehand' || x.stroke === 'Backhand'));

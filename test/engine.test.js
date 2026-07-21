@@ -46,6 +46,19 @@ test('outcome reconstruction covers every point', () => {
   assert.ok(r.sources.measured > 0);
 });
 
+test('one scoreboard: the score agrees with the point count everywhere', () => {
+  const r = M.reconstruction;
+  // the headline point count, the scoreboard and the recomputed tally are one number
+  assert.equal(r.reconstructed_score.you + r.reconstructed_score.opp, M.match.total_points);
+  assert.equal(r.reconstructed_score.you, M.match.points_won.you);
+  assert.equal(r.reconstructed_score.opp, M.match.points_won.opp);
+  assert.equal(r.total_points, M.points.length);
+  // rallies with no shots logged are counted, never scored - scoring them
+  // would invent an outcome and inflate the board past the points played
+  assert.ok(r.rallies_seen >= r.total_points);
+  assert.equal(r.rallies_seen - r.total_points, r.untracked_rallies);
+});
+
 test('patterns are produced', () => {
   assert.ok(Array.isArray(M.patterns2.you.serve_plus_one));
   assert.ok(M.patterns2.you.tendency.Forehand.length > 0);

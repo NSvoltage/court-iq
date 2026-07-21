@@ -16,14 +16,20 @@ A SwingVision spreadsheet export (`.xlsx`) with three sheets:
 - **Rallies** — one row per rally with a `Duration`.
 
 Coordinates are in metres. Court constants: net at `y = 11.885`, baseline at
-`y = 23.77`, singles sideline at `x = ±4.115`.
+`y = 23.77`, singles sideline at `x = ±4.115`, doubles sideline at `x = ±5.485`.
+
+**Singles is assumed.** The export carries no singles/doubles flag, so the
+placement maps draw a singles court and treat the doubles alleys as out. On the
+sample match this agrees with the tracking — every alley bounce is already
+labelled `Result = Out` — but a doubles export would be read wrongly.
 
 ## Pipeline
 
 ```
-xlsxlite.parse(file)  →  rawSheets {Settings, Shots, Rallies}
+xlsxlite.parse(file)        →  rawSheets {Settings, Shots, Rallies}
 SVEngine.build(rawSheets)   →  measured + first-order inferred model
-SVEngine3.build(rawSheets)  →  + shot quality, reconstructed outcomes, patterns  =  M
+SVIntegrity.process(M)      →  point outcomes decided, repaired, audited, verified
+SVEngine3.build(rawSheets)  →  + shot quality, targeting, patterns              =  M
 Career.fingerprint(M)       →  compact per-match record for history/trends
 ```
 
@@ -63,20 +69,78 @@ Anything that depends on *who won a point*, which the export does not record:
 - **First vs. second serve** — not distinguishable; only one serve is logged per
   point.
 
-## Outcome reconstruction
+## Outcome reconstruction — the integrity engine
 
-To cover the whole match instead of discarding ambiguous points, `SVEngine3`
-reconstructs outcomes:
+`src/engine/integrity.js` (`window.SVIntegrity`) is the **single owner of every
+point-outcome decision**. Nothing else in the codebase decides who won a point,
+which is what keeps the scoreboard, the statline, the coaching brief and the
+career record from drifting apart. It is a separate module so it can be audited
+and evaluated independently of the UI.
 
-- Rallies ending on a measured **out/net** → counted as an error (certain).
-- Rallies ending **in**, not truncated → credited to the hitter, weighted by the
-  last shot's quality (a clear putaway vs. a soft ball).
-- **Truncated** rallies (duration ≫ tracked shots) → winner imputed from the
-  in-rally shot-quality gap.
-- **Untracked** rallies (no shots logged) → allocated proportionally to form.
+```
+CLASSIFY → LEARN prior → IMPUTE → REWRITE → RECOMPUTE → VERIFY
+```
 
-Each match reports `M.reconstruction.pct_estimated` — the share of points that
-were modelled rather than measured — and the UI surfaces it.
+### 1. Classify
+
+An ordered rule table decides how each point ended. Order matters — the first
+matching rule wins:
+
+| Rule | Fires when | Class |
+|---|---|---|
+| `serve_fault_unresolved` | one shot, a serve, not `In` | reconstructed |
+| `measured_miss` | last shot not `In` | measured |
+| `long_rally_end` | ≥ 9 shots tracked | winner |
+| `clean_putaway` | last-shot quality clears a shot-count threshold | winner |
+
+`serve_fault_unresolved` encodes a rule of tennis that the export can't express:
+**a missed first serve doesn't end the point.** Only one serve is logged per
+point, so a lone faulted serve is ambiguous — the second serve simply wasn't
+recorded. Scoring it as the server losing the point is what drove both players
+below 50 % of service points won.
+
+### 2. Learn, impute, rewrite
+
+A prior is learned from **measured-only** points, then truncated points are
+ranked by a `dominance()` score and imputed to match that prior. Each point
+receives `outcome_class`, `outcome_conf` and a plain-English `reason`.
+
+### 3. Recompute
+
+Everything downstream of an outcome is rebuilt from the repaired points: points
+won, winners/errors, serve stats, rally buckets, momentum and trajectory tags.
+The coaching brief is regenerated afterwards so its narrative can't quote
+pre-repair counts.
+
+### 4. Verify
+
+Impossible states are checked against the rules of tennis — e.g. both players
+winning under half their service points, which cannot happen because someone has
+to be holding serve.
+
+### What it will not do
+
+**Rallies with no shots logged are counted but never scored.** Splitting them by
+the tracked win-rate would invent an outcome for a point there is zero evidence
+about, and it put the scoreboard out of step with the point count shown
+everywhere else. `M.reconstruction.rallies_seen` reports them; only
+`total_points` is ever scored.
+
+Stat families the export cannot support — break points, games, sets — are
+reported as unavailable rather than fabricated (`M.integrity.verification`).
+
+### Auditing and evaluation
+
+- `M.integrity.repair.audit` — one entry per change: point, before → after, the
+  rule that fired, why, and a confidence.
+- `SVIntegrity.evaluate()` — a hold-out **stratified by server**, reporting
+  `calibration_error_pts` as the primary metric and `accuracy` as secondary.
+  Calibration leads because per-point accuracy on a genuinely ambiguous point is
+  close to a coin flip; what matters is that the *totals* come out right.
+
+`M.reconstruction.pct_estimated` reports the share of scored points that were
+modelled rather than measured, and the UI marks modelled figures with an
+asterisk.
 
 ## Longitudinal fingerprint
 
@@ -107,7 +171,10 @@ arrow) and improvement (the colour) are computed separately.
 | `M.player.positioning` | contact-vs-baseline, depth mix (measured) |
 | `M.player.reliability` | per-shot in/out by stroke & direction (measured) |
 | `M.quality` | shot-quality index, expected winners (modelled) |
-| `M.reconstruction` | reconstructed score, sources, `pct_estimated` (modelled) |
+| `M.points` | one row per point: winner, `outcome_class`, `outcome_conf`, `reason` |
+| `M.integrity` | repair report + `audit`, `verification`, hold-out `evaluation` |
+| `M.reconstruction` | score, sources, `pct_estimated`, `rallies_seen` (modelled) |
+| `M.targeting` | placement in the receiver's frame: lateral, depth, grid, directions |
 | `M.patterns2` | serve+1 combos, direction tendency, rally openings |
 | `M.trajectories` | per-shot enriched table (coords, result, quality) |
 | `M.brief` | generated coaching narrative |

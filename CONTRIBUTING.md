@@ -19,7 +19,8 @@ No `npm install` is required — there are no runtime or build dependencies.
 
 - `src/template.html` — the UI. All views and rendering live here (plain SVG/Canvas, no framework). Contains the `/*__ASSETS__*/` marker the build fills in.
 - `src/engine/base.js` — `window.SVEngine.build(rawSheets)`: parse + dedupe + measured metrics.
-- `src/engine/augment.js` — `window.SVEngine3.build`: runs the base engine, then adds shot quality, outcome reconstruction, and patterns.
+- `src/engine/integrity.js` — `window.SVIntegrity`: the single owner of point-outcome decisions — the rule table, repair, audit trail, and hold-out evaluation.
+- `src/engine/augment.js` — `window.SVEngine3.build`: runs the base engine and the integrity pass, then adds shot quality, targeting, and patterns.
 - `src/engine/career.js` — `window.Career`: per-match fingerprints, trend math, insights, and `localStorage` persistence.
 - `src/vendor/` — vendored `fflate` + the `xlsxlite` reader.
 - `scripts/build.js` — concatenates the above into `dist/index.html`.
@@ -27,6 +28,9 @@ No `npm install` is required — there are no runtime or build dependencies.
 
 Each engine module is a plain IIFE that attaches to `window` (or `globalThis` in
 Node), which is why the same files run both in the browser and in the tests.
+They load in dependency order — `fflate` → `xlsxlite` → `base` → `integrity` →
+`augment` → `career` — set in `scripts/build.js`. See
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Conventions
 
@@ -36,6 +40,12 @@ Node), which is why the same files run both in the browser and in the tests.
 - **Measured vs. modelled.** If you add a metric, be clear about whether it is
   measured from coordinates/speed/result or inferred. Modelled numbers are
   labelled as such in the UI.
+- **One owner per number.** Views render `M`; they don't compute statistics of
+  their own, and nothing outside `integrity.js` decides who won a point. Two
+  places deriving the same number is how a scoreboard ends up disagreeing with
+  the point count beside it.
+- **Never invent data.** If the export can't support a stat, report it as
+  unavailable rather than filling the gap with a plausible-looking guess.
 - **Test engine changes.** If you touch the engines, add/adjust a case in
   `test/` and keep `npm test` green.
 

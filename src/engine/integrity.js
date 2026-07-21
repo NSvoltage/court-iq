@@ -40,6 +40,14 @@
   // balanced 44%). Short ones are overwhelmingly dropped tracking (1-2 shot
   // "in" endings: returner-last 100%), so they need evidence to count.
   const RULES = [
+    // TENNIS RULE: a missed first serve does not end the point — a second serve
+    // follows. SwingVision logs only one serve per point, so a point whose only
+    // tracked shot is a faulted serve is ambiguous: either a genuine double fault
+    // or (far more often) a first-serve fault whose second serve and rally simply
+    // weren't tracked. Awarding it to the returner would be wrong most of the time,
+    // so it goes to the imputer instead of being scored as a measured miss.
+    { id: "serve_fault_unresolved", when: p => p.n_shots <= 1 && p.last_stroke === "Serve" && p.last_result !== "In",
+      cls: "reconstructed", why: "first serve missed and nothing further was tracked — the second serve and rally are unrecorded, so the point's winner is unknown" },
     { id: "measured_miss", when: p => p.last_result !== "In", cls: "measured", why: "ball landed out or in the net — the point demonstrably ended here" },
     { id: "long_rally_end", when: p => p.n_shots >= 9, cls: "winner", why: "9+ shot rally ending in play reads as a genuine finish" },
     { id: "clean_putaway", when: (p, q) => q != null && q >= (p.n_shots <= 2 ? 70 : p.n_shots <= 4 ? 60 : 52), cls: "winner", why: "final ball good enough to have ended the point" }

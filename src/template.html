@@ -94,6 +94,13 @@ canvas{display:block;width:100%;touch-action:none}
 .drop.on{display:flex}
 .drop .box{border:2px dashed var(--accent);border-radius:20px;padding:60px 80px;text-align:center;color:var(--ink);font-size:18px;font-weight:700}
 .foot{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:11.5px;line-height:1.6}
+.ast{color:var(--warn);font-size:.72em;vertical-align:super;font-weight:800;margin-left:1px;cursor:help}
+.notes{margin-top:8px}
+.notes summary{cursor:pointer;color:var(--ink2);font-weight:600;list-style:none;font-size:11.5px}
+.notes summary::-webkit-details-marker{display:none}
+.notes summary:hover{color:var(--accent)}
+.notes ul{margin:8px 0 0;padding-left:16px}
+.notes li{margin:5px 0;line-height:1.5}
 .foot b{color:var(--ink2)}
 /* point log */
 .plog{width:100%;overflow-x:auto}
@@ -246,7 +253,7 @@ canvas{display:block;width:100%;touch-action:none}
 
     <section class="view" data-v="we">
       <h2 class="viewhead">Winners &amp; errors</h2>
-      <p class="viewsub">A point ends on a winner (last ball in) or an error (net/long). This layer is inferred from rally endings — see the Reliability tab for the directly-measured per-shot view.</p>
+      <p class="viewsub">A point ends on a winner (last ball in) or an error (net/long). Errors are measured exactly; winners count only endings we can verify.<span class="ast" title="Points where tracking stopped mid-rally are excluded from both, rather than guessed into them.">*</span></p>
       <div class="grid g2" style="margin-bottom:16px"><div class="card"><h3>Errors by stroke</h3><p class="hint">Which shot is leaking points.</p><div id="we-err"></div></div><div class="card"><h3>Winners by stroke</h3><p class="hint">Where offense comes from.</p><div id="we-win"></div></div></div>
       <div class="grid g3"><div class="card"><h3>Winner : Error ratio</h3><p class="hint">Above 1.0 = more winners than errors.</p><div id="we-ratio"></div></div><div class="card"><h3>Error type</h3><p class="hint">Net vs long.</p><div id="we-nettype"></div></div><div class="card"><h3>Error direction</h3><p class="hint">Tracked player.</p><div id="we-dir"></div></div></div>
     </section>
@@ -362,6 +369,9 @@ const C={you:"#3987e5",opp:"#e07a3c",good:"#22c55e",bad:"#ef4444",warn:"#f5b301"
 const SPINC={Topspin:"#3987e5",Slice:"#22c55e",Kick:"#f5b301",Flat:"#e07a3c"};
 const TGC={bh:"#a78bfa",fh:"#2dd4bf",mid:"#5b6b82"};
 const otherK=k=>k==="you"?"opp":"you";
+// quiet footnote marker for figures the integrity pass had to reconstruct
+const AST=fam=>(M&&M.integrity&&M.integrity.verification.annotate.indexOf(fam)>=0)
+  ?'<span class="ast" title="Partly reconstructed: tracking stopped mid-rally on some points. See Data notes.">*</span>':'';
 const NS="http://www.w3.org/2000/svg";
 const el=(t,a={})=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;};
 const T=(x,y,s,a={})=>{const t=el("text",Object.assign({x,y},a));t.textContent=s;if(!a.class&&!a.fill)t.setAttribute("class","axlab");return t;};
@@ -403,7 +413,7 @@ function renderAll(){
   renderMovement();renderPositioning();renderReliability();renderPatterns();renderTargeting();renderBrief();renderFoot();
   if(c3init){buildLegend();} // 3D redraws from live M each frame
 }
-function loadInto(m){M=m;byPoint=groupTraj();pointIds=Object.keys(byPoint).map(Number).sort((a,b)=>a-b);scoreByPt=buildScore();replay.idx=Math.max(0,pointIds.findIndex(p=>byPoint[p].length>=8&&byPoint[p].length<=14));replay.shot=0;replay.u=0;renderAll();}
+function loadInto(m){if(!modelUsable(m)){console.warn("refusing to load an incompatible model");return;}M=m;byPoint=groupTraj();pointIds=Object.keys(byPoint).map(Number).sort((a,b)=>a-b);scoreByPt=buildScore();replay.idx=Math.max(0,pointIds.findIndex(p=>byPoint[p].length>=8&&byPoint[p].length<=14));replay.shot=0;replay.u=0;renderAll();}
 function handleFiles(fileList){
   const files=Array.from(fileList||[]); if(!files.length)return;
   let done=0,lastM=null,ok=0,fail=0;
@@ -432,7 +442,8 @@ document.getElementById("lib-cleardemo").onclick=()=>{Career.clearDemo();renderC
 /* ============ CAREER RENDER ============ */
 let careerRecs=[];
 function renderCareer(){careerRecs=Career.load();renderLibrary();renderTrends();renderInsights();}
-function openMatch(id){const full=Career.fullModel(id);if(!full){alert("Full detail for this match isn't cached on this device (older matches are dropped to save space). Re-import its .xlsx to open the match views.");return;}loadInto(full);setMode("match");showView("overview");}
+function modelUsable(m){return !!(m&&m.match&&m.serve&&m.winners_errors&&m.player&&m.targeting&&m.patterns2&&m.quality);}
+function openMatch(id){const full=Career.fullModel(id);if(full&&!modelUsable(full)){alert("That match was analysed by an earlier version of Court IQ. Re-import its .xlsx to open it with the current model.");return;}if(!full){alert("Full detail for this match isn't cached on this device (older matches are dropped to save space). Re-import its .xlsx to open the match views.");return;}loadInto(full);setMode("match");showView("overview");}
 function renderLibrary(){
   const rs=careerRecs, wins=rs.filter(r=>r.win).length, real=rs.filter(r=>!r.demo).length;
   const span=rs.length?rs[0].date_str+" → "+rs[rs.length-1].date_str:"—";
@@ -531,18 +542,17 @@ function renderInsights(){
 function tiles(id,arr){const box=clear(id);arr.forEach(([k,v,cls,s])=>{const c=mk("div","card tile");c.innerHTML=`<div class="k">${k}</div><div class="v ${cls||''}">${v}</div><div class="s">${s||''}</div>`;box.appendChild(c);});}
 function renderOverview(){
   const m=M.match,we=M.winners_errors,sv=M.serve,rec=M.reconstruction,q=M.quality,mv=M.player.movement;
-  document.getElementById("ov-sub").textContent=`${M.meta.tracked} — a high-variance ball-striker — vs ${M.meta.opp}, a steady counter-puncher. Outcomes for untracked and ambiguous points are reconstructed from shot quality and rally duration, so the whole match is covered.`;
+  document.getElementById("ov-sub").textContent=`${M.meta.tracked} — a high-variance ball-striker — vs ${M.meta.opp}, a steady counter-puncher.`;
   tiles("ov-tiles",[
-    ["Reconstructed final",`${rec.reconstructed_score.you}–${rec.reconstructed_score.opp}`,"opp",`${rec.pct_estimated}% of points estimated`],
+    ["Final score"+AST("score"),`${rec.reconstructed_score.you}–${rec.reconstructed_score.opp}`,"opp",`±${(M.integrity&&M.integrity.verification.score_uncertainty)||0} points`],
     ["Distance covered",`${(mv.you.dist_est_m/1000).toFixed(2)} km`,"you",`${M.meta.opp} ${(mv.opp.dist_est_m/1000).toFixed(2)} km`],
     ["Shot-quality index",q.you.groundstroke_q,q.you.groundstroke_q>=q.opp.groundstroke_q?"good":"warn",`${M.meta.opp} ${q.opp.groundstroke_q} · scale 0–100`],
-    ["Expected winners",`${q.you.expected_winners} of ${q.you.actual_winners}`,"warn",`few "winners" were true putaways`],
+    ["Winners"+AST("winners"),`${we.you.winners}`,"good",`${q.you.expected_winners} expected from shot quality`],
     [`${M.meta.tracked} serve`,`${sv.you.avg_speed} mph`,"you",`top ${sv.you.max_speed} · ${sv.you.in_rate}% in`],
     ["Service pts won",sv.you.service_points_won_pct+"%","bad","not winning behind serve"],
     ["Avg rally",m.avg_rally_shots,"","shots · longest "+m.longest_rally],
     [`${M.meta.opp} BH winners`,we.opp.winners_by_stroke.Backhand||0,"opp","their #1 weapon"]]);
-  document.getElementById("ov-callout").innerHTML=`<div class="big">${M.brief.match_summary.headline.replace(/unforced errors/i,'<b class="bad">unforced errors</b>')}</div><p>${M.brief.match_summary.player_style.you}</p>`+
-    `<p style="margin-top:8px;font-size:12px;color:var(--muted)">Reconstructed score covers all ${rec.total_points} points: ${rec.sources.measured} measured errors, ${rec.sources.clear_winner} clear winners, ${rec.sources.soft_winner+rec.sources.imputed_rally} quality-estimated, ${rec.sources.allocated_untracked} untracked allocated by form.</p>`;
+  document.getElementById("ov-callout").innerHTML=`<div class="big">${M.brief.match_summary.headline.replace(/unforced errors/i,'<b class="bad">unforced errors</b>')}</div><p>${M.brief.match_summary.player_style.you}</p>`;
   drawMomentum();
 }
 function drawMomentum(){
@@ -574,6 +584,7 @@ let ptState={wonby:"all",ending:"all",stroke:"all",sort:"order"};
 const STROKE_LABEL={Overhead:"Smash",Serve:"Serve",Forehand:"Forehand",Backhand:"Backhand",Volley:"Volley"};
 function finalShot(p){
   const s=STROKE_LABEL[p.last_stroke]||p.last_stroke||"Shot";
+  if(p.reason==="imputed")return{txt:s+" — rally continued",tone:"est"};
   if(p.reason==="winner"){
     if(p.last_stroke==="Serve")return{txt:p.n_shots<=1?"Ace":"Service winner",tone:"win"};
     return{txt:s+" winner",tone:"win"};
@@ -1042,7 +1053,14 @@ function wireExport(){
   function toCSV(rows,cols){return[cols.join(",")].concat(rows.map(r=>cols.map(c=>{let v=r[c];if(v==null)v="";v=String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(","))).join("\n");}
   document.querySelectorAll("#brief-export button, [data-dl]").forEach(btn=>{if(!btn.dataset.dl)return;btn.onclick=()=>{const k=btn.dataset.dl;if(k==="brief")dl("coaching_brief.json",JSON.stringify(M.brief,null,2),"application/json");if(k==="model")dl("match_model.json",JSON.stringify(M,null,1),"application/json");if(k==="shots")dl("shots.csv",toCSV(M.trajectories,["pt","i","player","stroke","type","spin","spd","result","dir","outcome","hx","hy","hz","bx","by"]),"text/csv");const o=btn.textContent;btn.textContent="✓ Done";setTimeout(()=>btn.textContent=o,1300);};});
 }
-function renderFoot(){const r=M.reconstruction;document.getElementById("foot").innerHTML=`Processed <b>${M.meta.raw_shot_rows}</b> exported rows → <b>${M.meta.clean_shot_rows}</b> after removing ${M.meta.corrupt_dupes_removed} duplicate rows. Placement, contact, speed &amp; in/out are measured; shot quality, distance and reconstructed outcomes are modelled (${r.pct_estimated}% of points estimated). Everything computes in your browser — nothing is uploaded. Load another match to compare.`;}
+function renderFoot(){
+  const I=M.integrity, notes=I?I.verification.flags:[];
+  const li=notes.map(f=>`<li>${f.msg}</li>`).join("");
+  document.getElementById("foot").innerHTML=
+    `<b>${M.meta.clean_shot_rows}</b> tracked shots · everything computes in your browser, nothing is uploaded.`+
+    (I?` <span class="ast">*</span> marks figures partly reconstructed where tracking stopped mid-rally.`+
+       `<details class="notes"><summary>Data notes (${notes.length})</summary><ul>${li}</ul></details>`:``);
+}
 
 /* ============ 3D COURT ENGINE ============ */
 const cam={yaw:-0.42,pitch:0.74,scale:36,dist:30,f:22,cx:0,cy:0};

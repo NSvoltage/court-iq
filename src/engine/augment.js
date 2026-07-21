@@ -49,29 +49,20 @@
         elite_shots:gq.filter(q=>q>=70).length, weak_shots:gq.filter(q=>q<30).length, n:gq.length};
     }
 
-    // ---------- OUTCOME IMPUTATION -> reconstruction ----------
+    // ---------- DATA INTEGRITY: classify, reconstruct, correct, verify ----------
+    // Owns every outcome decision. Must run before anything consuming winners.
+    if(root.SVIntegrity) root.SVIntegrity.process(M, byPoint);
+    // narrative text was written from pre-repair counts — regenerate it
+    if(root.SVEngine && root.SVEngine.buildBrief) M.brief = root.SVEngine.buildBrief(M);
+
+    // ---------- reconstruction (score), built on the REPAIRED outcomes ----------
     const src=Counter([]); const perPoint=[];
     let recon={you:0,opp:0};
-    const trackedIds=new Set(M.points.map(p=>p.point));
     for(const p of M.points){
-      const shots=byPoint[p.point]||[];
-      const last=shots[shots.length-1];
-      let winner=p.winner, source, conf;
-      if(p.reason==="error"){source="measured";conf=1.0;}
-      else{ // last shot 'In'
-        const trunc=dur[p.point]&&p.n_shots&&(dur[p.point]/p.n_shots>1.9);
-        const Q=last?last.q:null;
-        if(trunc){
-          source="imputed";
-          const youQ=mean(shots.filter(s=>s.player==="you"&&s.q!=null).map(s=>s.q));
-          const oppQ=mean(shots.filter(s=>s.player==="opp"&&s.q!=null).map(s=>s.q));
-          winner=youQ>=oppQ?"you":"opp";
-          conf=rnd(0.5+clamp(Math.abs(youQ-oppQ)/80,0,0.35),2);
-        } else {
-          source=(Q!=null&&Q>=55)?"winner_clear":"winner_soft";
-          conf=(Q!=null&&Q>=55)?0.9:0.7; // hitter credited
-        }
-      }
+      const winner=p.winner;
+      const source = p.outcome_class==="error" ? "measured"
+        : p.outcome_class==="winner" ? "winner_clear" : "imputed";
+      const conf = p.outcome_conf!=null ? p.outcome_conf : 0.5;
       recon[winner]++; src[source]=(src[source]||0)+1;
       perPoint.push({pt:p.point,winner,source,conf});
     }
@@ -94,8 +85,8 @@
     // reconcile the coaching-brief headline to the reconstructed full-match score
     if(M.brief&&M.brief.match_summary){
       const rs=reconFull, lead=rs.opp>=rs.you?M.meta.opp:M.meta.tracked, hi=Math.max(rs.you,rs.opp), lo=Math.min(rs.you,rs.opp), wp=pct(hi,rs.you+rs.opp);
-      M.brief.match_summary.headline=`${lead} came out ahead ${hi}–${lo} across a reconstructed ${totalRallies} points (${wp}%, with ${M.reconstruction.pct_estimated}% estimated). The margin was manufactured almost entirely by ${M.meta.tracked}'s unforced errors, not by the opponent's offense.`;
-      M.brief.match_summary.score_context=`Rally-mode export gives no scoreboard. ${M.reconstruction.sources.measured} points end on a measured miss; the rest are reconstructed from shot quality and rally duration.`;
+      M.brief.match_summary.headline=`${lead} came out ahead ${hi}–${lo} on points. The margin was manufactured almost entirely by ${M.meta.tracked}'s unforced errors, not by the opponent's offense.`;
+      M.brief.match_summary.score_context=`Score is reconstructed from tracked points (±${M.integrity?M.integrity.verification.score_uncertainty:0}).`;
     }
     // expected winners: terminal 'In' shots that were genuinely high quality
     for(const k of ["you","opp"]){
@@ -185,7 +176,9 @@
         segments:seg.map(S=>({seg:S.seg,n:S.n,left_pct:P(S.left,S.n),middle_pct:P(S.middle,S.n),right_pct:P(S.right,S.n),deep_pct:P(S.deep,S.n),right_side_pct:P(S.rightSide,S.rightSide+S.leftSide),left_side_pct:P(S.leftSide,S.rightSide+S.leftSide)}))
       };
     }
+
     return M;
   }
+
   root.SVEngine3={build};
 })(typeof window!=="undefined"?window:globalThis);

@@ -78,13 +78,21 @@
   }
 
   // ---- persistence ----
+  // localStorage is the source of truth; `mem` is an in-memory fallback so the
+  // app still works in sandboxed iframes / private modes where storage throws.
+  let mem = null;
   function blank() { return { records: [], full: {}, order: [] }; }
-  function read() { try { return JSON.parse(root.localStorage.getItem(KEY)) || blank(); } catch (e) { return blank(); } }
+  function read() {
+    try { const s = JSON.parse(root.localStorage.getItem(KEY)); if (s) return s; } catch (e) {}
+    return mem || blank();
+  }
   function write(store) {
+    mem = store; // in-memory keeps the COMPLETE store (records + full models)
     try { root.localStorage.setItem(KEY, JSON.stringify(store)); return true; }
-    catch (e) { // quota: drop oldest full models until it fits
-      while (store.order.length) { const id = store.order.shift(); delete store.full[id]; try { root.localStorage.setItem(KEY, JSON.stringify(store)); return true; } catch (e2) { } }
-      try { root.localStorage.setItem(KEY, JSON.stringify(Object.assign({}, store, { full: {}, order: [] }))); } catch (e3) { }
+    catch (e) { // quota (or blocked): shrink a CLONE for storage; never touch `mem`
+      const t = { records: store.records, full: Object.assign({}, store.full), order: store.order.slice() };
+      while (t.order.length) { const id = t.order.shift(); delete t.full[id]; try { root.localStorage.setItem(KEY, JSON.stringify(t)); return true; } catch (e2) { } }
+      try { root.localStorage.setItem(KEY, JSON.stringify({ records: store.records, full: {}, order: [] })); } catch (e3) { }
       return false;
     }
   }
@@ -92,6 +100,7 @@
     metrics: METRICS, headline: HEADLINE, metric: k => METRIC[k], fmt, fingerprint,
     load() { const s = read(); return s.records.slice().sort((a, b) => a.date - b.date); },
     fullModel(id) { const s = read(); return s.full[id] || null; },
+    fullIds() { return Object.keys(read().full); },
     add(record, fullModel) {
       const s = read();
       const i = s.records.findIndex(r => r.id === record.id);

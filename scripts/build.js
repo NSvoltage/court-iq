@@ -16,7 +16,7 @@ const MODULES = [
   'src/vendor/fflate.js',    // CSP-safe unzip (vendored)
   'src/vendor/xlsxlite.js',  // minimal .xlsx reader
   'src/engine/base.js',      // window.SVEngine  — measured + first-order inferred model
-  'src/engine/repair.js',    // window.SVRepair  — outcome repair (must load before augment)
+  'src/engine/integrity.js', // window.SVIntegrity — classify/reconstruct/correct/verify (before augment)
   'src/engine/augment.js',   // window.SVEngine3 — shot quality, reconstructed outcomes, patterns
   'src/engine/career.js',    // window.Career    — longitudinal fingerprints, trends, insights
 ];

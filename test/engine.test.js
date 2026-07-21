@@ -6,7 +6,7 @@ const path = require('path');
 
 // The engine modules attach to globalThis (they run in the browser too).
 require('../src/engine/base.js');
-require('../src/engine/repair.js');
+require('../src/engine/integrity.js');
 require('../src/engine/augment.js');
 
 const sample = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'src', 'data', 'sample-match.json'), 'utf8'));
@@ -63,19 +63,48 @@ test('targeting: placement distribution + segments', () => {
   assert.ok(M.targeting.segment_labels[2].to >= M.targeting.segment_labels[0].to);
 });
 
-test('verification judges stat-family confidence', () => {
-  const v = M.verification;
+test('integrity: verification judges stat-family confidence', () => {
+  const v = M.integrity.verification;
   assert.equal(typeof v.level, 'string');
   assert.ok(Array.isArray(v.flags));
-  // this export has no game structure and biased outcome attribution
-  assert.equal(v.game_structure_recoverable, false);
+  assert.equal(v.game_structure_recoverable, false); // no games in this export
   assert.equal(v.reliable.break_points, false);
   assert.equal(v.reliable.games_sets, false);
-  // measured layer stays trustworthy; inferred outcome layer flagged
   assert.equal(v.reliable.measured_shots, true);
   assert.equal(v.reliable.errors, true);
-  assert.ok(v.ambiguous_end_pct >= 0 && v.ambiguous_end_pct <= 100);
   assert.ok(v.flags.some((f) => f.code === 'no_game_structure'));
+  assert.ok(Array.isArray(v.annotate)); // which stat families need a UI footnote
+});
+
+test('integrity: repair corrects impossible tennis', () => {
+  const r = M.integrity.repair;
+  assert.ok(r.endings.measured > 0 && r.endings.reconstructed > 0);
+  assert.ok(r.winners_changed > 0);
+  // the defect: both players cannot lose the majority of their service points
+  const sy = M.serve.you.service_points_won_pct, so = M.serve.opp.service_points_won_pct;
+  assert.ok(!(sy < 50 && so < 50), 'both players below 50% service points won');
+  // return% must stay the complement of the opponent's service%
+  assert.ok(Math.abs(M.serve.you.return_points_won_pct - (100 - so)) < 0.2);
+  // winners only counted for endings we can defend
+  const defensible = M.points.filter((p) => p.outcome_class === 'winner').length;
+  assert.equal(M.winners_errors.you.winners + M.winners_errors.opp.winners, defensible);
+});
+
+test('integrity: every change is auditable', () => {
+  const a = M.integrity.repair.audit;
+  assert.ok(Array.isArray(a) && a.length === M.integrity.repair.winners_changed);
+  const e = a[0];
+  ['point', 'from', 'to', 'cls', 'rule', 'why', 'conf'].forEach((k) => assert.ok(k in e, 'audit entry has ' + k));
+  assert.notEqual(e.from, e.to);
+});
+
+test('integrity: imputer is evaluated against held-out truth', () => {
+  const ev = M.integrity.evaluation;
+  assert.ok(ev && ev.n >= 10);
+  assert.ok(ev.accuracy >= 0 && ev.accuracy <= 100);
+  assert.ok(ev.baseline_majority_class >= 0);
+  // sanity: hold-out accuracy should be in a believable band, not degenerate
+  assert.ok(ev.accuracy > 20, 'imputer no better than noise');
 });
 
 test('per-shot trajectories carry coords + quality', () => {

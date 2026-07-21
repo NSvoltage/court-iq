@@ -1,18 +1,33 @@
 <title>Court IQ — SwingVision Match Analyzer</title>
 <style>
-html,body{background:#0a0e16;margin:0}
-:root{color-scheme:dark}
-.app{
+html,body{background:var(--bg);margin:0}
+/* ===== THEME TOKENS ===== day (Wimbledon light) is default; night overrides. */
+:root{
+  color-scheme:light;
+  --bg:#f3f6f0;--panel:#ffffff;--panel2:#eef3ea;--line:#dbe4d5;
+  --ink:#16241b;--ink2:#42564a;--muted:#6f8175;
+  --you:#2563eb;--opp:#cf6a1c;--good:#149a45;--bad:#d92020;--warn:#a9760a;--rally:#7c8a80;--accent:#1f8a4c;
+  --topbar:rgba(255,255,255,.9);--tt-bg:#ffffff;--drop-bg:rgba(236,243,232,.9);--rpshot-bg:rgba(255,255,255,.85);
+  --court:#c3e0b2;--court-line:rgba(255,255,255,.82);--court-net:#254a2e;--court-net-mesh:rgba(37,74,46,.16);
+  --court-top:#b8daa6;--court-bot:#d7ebca;--canvas-bg:radial-gradient(120% 100% at 50% 0%,#d9ead0,#eef5e9);
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
   --bg:#0a0e16;--panel:#111826;--panel2:#0e1420;--line:#1e2a3d;
   --ink:#f2f5fa;--ink2:#aab6c8;--muted:#6d7c92;
-  --you:#3987e5;--opp:#e07a3c;--good:#22c55e;--bad:#ef4444;--warn:#f5b301;--rally:#5b6b82;--accent:#3987e5;
+  --you:#3987e5;--opp:#e07a3c;--good:#22c55e;--bad:#ef4444;--warn:#f5b301;--rally:#5b6b82;--accent:#3bb66a;
+  --topbar:rgba(10,14,22,.92);--tt-bg:#060a12;--drop-bg:rgba(6,10,18,.86);--rpshot-bg:rgba(6,10,18,.72);
+  --court:#12293e;--court-line:rgba(220,235,255,.55);--court-net:#ffffff;--court-net-mesh:rgba(200,220,240,.1);
+  --court-top:#16324a;--court-bot:#0f2338;--canvas-bg:radial-gradient(120% 100% at 50% 0%,#0f1826,#080b12);
+}
+.app{
   background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;
 }
 .app *{box-sizing:border-box}
 .app h1,.app h2,.app h3,.app h4,.app p{margin:0}
 .wrap{max-width:1180px;margin:0 auto;padding:0 20px 90px}
 /* top bar */
-.topbar{position:sticky;top:0;z-index:50;background:rgba(10,14,22,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topbar{position:sticky;top:0;z-index:50;background:var(--topbar);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .topinner{max-width:1180px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .brand{font-size:15px;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
 .brand .logo{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--you),var(--opp));display:inline-flex;align-items:center;justify-content:center;font-size:13px}
@@ -71,10 +86,10 @@ section.view.on{display:block}
 .method{font-size:11px;color:var(--muted);line-height:1.5;margin-top:12px;font-style:italic}
 svg text{font-family:inherit}.axlab{fill:#6d7c92;font-size:11px}.axlab.tab{font-variant-numeric:tabular-nums}
 canvas{display:block;width:100%;touch-action:none}
-.canvas-wrap{position:relative;background:radial-gradient(120% 100% at 50% 0%,#0f1826,#080b12);border-radius:16px;overflow:hidden;border:1px solid var(--line)}
+.canvas-wrap{position:relative;background:var(--canvas-bg);border-radius:16px;overflow:hidden;border:1px solid var(--line)}
 .hud{position:absolute;top:12px;right:14px;text-align:right;font-size:11px;color:var(--muted);pointer-events:none;font-variant-numeric:tabular-nums}
 .cnote{position:absolute;bottom:10px;left:14px;font-size:11px;color:var(--muted);pointer-events:none}
-#tt{position:fixed;pointer-events:none;z-index:100;background:#060a12;border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:12px;color:var(--ink);box-shadow:0 8px 24px rgba(0,0,0,.5);opacity:0;transition:opacity .1s;max-width:230px;line-height:1.4}
+#tt{position:fixed;pointer-events:none;z-index:100;background:var(--tt-bg);border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:12px;color:var(--ink);box-shadow:0 8px 24px rgba(0,0,0,.5);opacity:0;transition:opacity .1s;max-width:230px;line-height:1.4}
 #tt b{color:#fff}#tt .mut{color:var(--muted)}
 /* finding cards */
 .finding{background:var(--panel);border:1px solid var(--line);border-left-width:4px;border-radius:12px;padding:16px 18px;margin-bottom:12px}
@@ -90,7 +105,7 @@ canvas{display:block;width:100%;touch-action:none}
 .gameplan{background:linear-gradient(135deg,rgba(34,197,94,.10),rgba(57,135,229,.06));border:1px solid var(--line);border-radius:14px;padding:18px 20px}
 .gameplan .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--good);font-weight:700;margin-bottom:6px}
 .gameplan p{font-size:14px;line-height:1.55}
-.drop{position:fixed;inset:0;z-index:200;background:rgba(6,10,18,.86);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center}
+.drop{position:fixed;inset:0;z-index:200;background:var(--drop-bg);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center}
 .drop.on{display:flex}
 .drop .box{border:2px dashed var(--accent);border-radius:20px;padding:60px 80px;text-align:center;color:var(--ink);font-size:18px;font-weight:700}
 .foot{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:11.5px;line-height:1.6}
@@ -164,6 +179,7 @@ canvas{display:block;width:100%;touch-action:none}
   .replay-side.show{position:fixed;top:0;right:0;bottom:0;width:min(340px,88vw);max-height:none;z-index:120;border-radius:0;box-shadow:-14px 0 44px rgba(0,0,0,.55)}
 }
 </style>
+<script>/* set theme before first paint to avoid a flash */(function(){try{var t=localStorage.getItem("courtiq_theme");if(t!=="light"&&t!=="dark")t=(window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme="light";}})();</script>
 
 <div class="app">
   <div class="topbar">
@@ -172,6 +188,7 @@ canvas{display:block;width:100%;touch-action:none}
       <div class="seg" id="modetoggle" style="margin-left:2px"><button data-m="match" class="on">This match</button><button data-m="career">Career</button></div>
       <div class="matchtag" id="matchtag"></div>
       <div class="spacer"></div>
+      <button class="loadbtn" id="themebtn" title="Toggle day / night" aria-label="Toggle day / night" style="padding:8px 11px">🌙</button>
       <button class="loadbtn" id="loadbtn">⤒ Load match(es)</button>
       <input type="file" id="fileinput" accept=".xlsx" multiple style="display:none">
     </div>
@@ -202,7 +219,7 @@ canvas{display:block;width:100%;touch-action:none}
       </div>
       <div class="replay-layout" id="replay-layout">
         <div class="canvas-wrap"><canvas id="court3d" height="580"></canvas><div class="hud" id="c3-hud"></div><div class="cnote" id="c3-note">drag to rotate · scroll to zoom</div>
-          <div id="rp-shot" style="position:absolute;top:12px;left:14px;font-size:12.5px;color:var(--ink);background:rgba(6,10,18,.72);border:1px solid var(--line);border-radius:9px;padding:8px 12px;display:none;line-height:1.5;max-width:280px"></div>
+          <div id="rp-shot" style="position:absolute;top:12px;left:14px;font-size:12.5px;color:var(--ink);background:var(--rpshot-bg);border:1px solid var(--line);border-radius:9px;padding:8px 12px;display:none;line-height:1.5;max-width:280px"></div>
         </div>
         <aside class="replay-side" id="replay-side">
           <div class="rs-head">
@@ -365,7 +382,20 @@ canvas{display:block;width:100%;touch-action:none}
 <script>
 "use strict";
 /* ============ shared helpers ============ */
-const C={you:"#3987e5",opp:"#e07a3c",good:"#22c55e",bad:"#ef4444",warn:"#f5b301",rally:"#5b6b82",ink:"#f2f5fa",ink2:"#aab6c8",muted:"#6d7c92",line:"#1e2a3d",panel2:"#0e1420"};
+/* Chart/canvas palette is derived from the live CSS theme tokens so SVG + canvas
+   recolor with the theme. Re-read on every theme switch, then re-render. */
+function readPalette(){const s=getComputedStyle(document.documentElement),g=n=>s.getPropertyValue("--"+n).trim();
+  return {you:g("you"),opp:g("opp"),good:g("good"),bad:g("bad"),warn:g("warn"),rally:g("rally"),ink:g("ink"),ink2:g("ink2"),muted:g("muted"),line:g("line"),panel:g("panel"),panel2:g("panel2"),accent:g("accent"),
+    court:g("court"),courtLine:g("court-line"),courtNet:g("court-net"),courtNetMesh:g("court-net-mesh"),courtTop:g("court-top"),courtBot:g("court-bot")};}
+let C=readPalette();
+function themeNow(){return document.documentElement.dataset.theme==="dark"?"dark":"light";}
+function applyTheme(mode){
+  document.documentElement.dataset.theme=mode;
+  try{localStorage.setItem("courtiq_theme",mode);}catch(e){}
+  const b=document.getElementById("themebtn");if(b)b.textContent=mode==="dark"?"☀️":"🌙";
+  C=readPalette();
+  if(typeof M!=="undefined"&&M){renderAll();if(appMode==="career")renderCareer();}
+}
 const SPINC={Topspin:"#3987e5",Slice:"#22c55e",Kick:"#f5b301",Flat:"#e07a3c"};
 const TGC={bh:"#a78bfa",fh:"#2dd4bf",mid:"#5b6b82"};
 const otherK=k=>k==="you"?"opp":"you";
@@ -429,6 +459,8 @@ function handleFiles(fileList){
 }
 document.getElementById("loadbtn").onclick=()=>document.getElementById("fileinput").click();
 document.getElementById("lib-load").onclick=()=>document.getElementById("fileinput").click();
+document.getElementById("themebtn").textContent=themeNow()==="dark"?"☀️":"🌙";
+document.getElementById("themebtn").onclick=()=>applyTheme(themeNow()==="dark"?"light":"dark");
 document.getElementById("fileinput").onchange=e=>{if(e.target.files.length)handleFiles(e.target.files);e.target.value="";};
 const drop=document.getElementById("drop");
 window.addEventListener("dragover",e=>{e.preventDefault();drop.classList.add("on");});
@@ -681,13 +713,13 @@ function courtSVG(box,{w=520,h=560,halfOnly=false,pad=26}={}){
   const ox=w/2,oy=pad;const X=x=>ox+x*sc,Yf=y=>oy+(BASE-y)*sc;
   const svg=el("svg",{viewBox:`0 0 ${w} ${h}`,width:"100%",height:"auto"});svg.style.maxHeight=h+"px";
   const g=el("g");svg.appendChild(g);
-  g.appendChild(el("rect",{x:X(-DBL),y:Yf(BASE),width:DBL*2*sc,height:(BASE-yTop)*sc,fill:"#12293e",rx:4}));
-  const L=(a,b,c,d,st={})=>g.appendChild(el("line",Object.assign({x1:X(a),y1:Yf(b),x2:X(c),y2:Yf(d),stroke:"rgba(220,235,255,.55)","stroke-width":1.2},st)));
+  g.appendChild(el("rect",{x:X(-DBL),y:Yf(BASE),width:DBL*2*sc,height:(BASE-yTop)*sc,fill:C.court,rx:4}));
+  const L=(a,b,c,d,st={})=>g.appendChild(el("line",Object.assign({x1:X(a),y1:Yf(b),x2:X(c),y2:Yf(d),stroke:C.courtLine,"stroke-width":1.2},st)));
   L(-DBL,yTop,DBL,yTop);L(-DBL,BASE,DBL,BASE);L(-DBL,yTop,-DBL,BASE);L(DBL,yTop,DBL,BASE);
   L(-SGL,yTop,-SGL,BASE);L(SGL,yTop,SGL,BASE);
   L(-SGL,NET+6.4,SGL,NET+6.4);if(!halfOnly)L(-SGL,NET-6.4,SGL,NET-6.4);
   L(0,NET-(halfOnly?0:6.4),0,NET+6.4);
-  L(-DBL,NET,DBL,NET,{stroke:"#fff","stroke-width":2});
+  L(-DBL,NET,DBL,NET,{stroke:C.courtNet,"stroke-width":2});
   return {svg,g,X,Y:Yf,sc};
 }
 
@@ -801,9 +833,9 @@ function drawCoverage(){
   const box=clear("mv-cov");const W=440,H=250,pad=16,worldW=DBL*2,worldH=NET+2,sc=Math.min((W-2*pad)/worldW,(H-2*pad)/worldH),ox=W/2,oy=H-pad;
   const X=x=>ox+x*sc,Y=y=>oy-(y+2)*sc;
   const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:"auto"});svg.style.maxHeight="270px";
-  svg.appendChild(el("rect",{x:X(-DBL),y:Y(NET),width:DBL*2*sc,height:(NET+2)*sc,fill:"#12293e",rx:4}));
-  const L=(a,b,c,d,st={})=>svg.appendChild(el("line",Object.assign({x1:X(a),y1:Y(b),x2:X(c),y2:Y(d),stroke:"rgba(220,235,255,.55)","stroke-width":1.2},st)));
-  L(-DBL,0,DBL,0,{stroke:"#fff","stroke-width":1.8});L(-SGL,0,-SGL,NET);L(SGL,0,SGL,NET);L(-DBL,NET,DBL,NET,{stroke:"#fff","stroke-width":1.6});L(-DBL,0,-DBL,NET);L(DBL,0,DBL,NET);
+  svg.appendChild(el("rect",{x:X(-DBL),y:Y(NET),width:DBL*2*sc,height:(NET+2)*sc,fill:C.court,rx:4}));
+  const L=(a,b,c,d,st={})=>svg.appendChild(el("line",Object.assign({x1:X(a),y1:Y(b),x2:X(c),y2:Y(d),stroke:C.courtLine,"stroke-width":1.2},st)));
+  L(-DBL,0,DBL,0,{stroke:C.courtNet,"stroke-width":1.8});L(-SGL,0,-SGL,NET);L(SGL,0,SGL,NET);L(-DBL,NET,DBL,NET,{stroke:C.courtNet,"stroke-width":1.6});L(-DBL,0,-DBL,NET);L(DBL,0,DBL,NET);
   [["opp",C.opp],["you",C.you]].forEach(([k,col])=>{M.player.movement[k].folded.forEach(([x,y])=>svg.appendChild(el("circle",{cx:X(x),cy:Y(y),r:3,fill:col,"fill-opacity":.16})));});
   svg.appendChild(T(X(0),Y(0)+13,"baseline",{"text-anchor":"middle",fill:C.muted,"font-size":10}));svg.appendChild(T(X(0),Y(NET)-5,"net",{"text-anchor":"middle",fill:C.muted,"font-size":10}));
   box.appendChild(svg);legendInto(box,[[disp("you"),C.you],[disp("opp"),C.opp]]);
@@ -933,7 +965,7 @@ function drawTargetMap(){
   const RX=[X(-DBL),X(DBL)],xMin=Math.min(RX[0],RX[1]),xMax=Math.max(RX[0],RX[1]);
   const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:"auto"});svg.style.maxHeight="450px";
   // court surface
-  svg.appendChild(el("rect",{x:xMin,y:oyTop,width:cW,height:cH,fill:"#12293e",rx:4}));
+  svg.appendChild(el("rect",{x:xMin,y:oyTop,width:cW,height:cH,fill:C.court,rx:4}));
   const zones=tgState.map==="zones";
   if(zones){ // zone shading (3 lateral bands × 3 depth bands), from live grid
     const colE=[-DBL,-SGL/3,SGL/3,DBL],depE=[1,0.66,0.33,0];
@@ -945,12 +977,12 @@ function drawTargetMap(){
         svg.appendChild(T((xa+xb)/2,(y0+y1)/2+13,z.n,{"text-anchor":"middle",fill:"rgba(255,255,255,.6)","font-size":9.5}));}}
   }
   // court lines
-  const L=(a,b,c,d,st={})=>svg.appendChild(el("line",Object.assign({x1:X(a),y1:Yd(b),x2:X(c),y2:Yd(d),stroke:"rgba(220,235,255,.5)","stroke-width":1.1},st)));
+  const L=(a,b,c,d,st={})=>svg.appendChild(el("line",Object.assign({x1:X(a),y1:Yd(b),x2:X(c),y2:Yd(d),stroke:C.courtLine,"stroke-width":1.1},st)));
   const svcDeep=6.4/(BASE-NET);
   L(-DBL,1,DBL,1);L(-SGL,1,-SGL,0);L(SGL,1,SGL,0);L(-DBL,1,-DBL,0);L(DBL,1,DBL,0);
   L(-SGL,svcDeep,SGL,svcDeep);L(0,svcDeep,0,0);
-  L(-0.35,1,0.35,1,{stroke:"rgba(220,235,255,.7)"});
-  svg.appendChild(el("line",{x1:xMin,y1:Yd(0),x2:xMax,y2:Yd(0),stroke:"#fff","stroke-width":2.4})); // net
+  L(-0.35,1,0.35,1,{stroke:C.courtLine});
+  svg.appendChild(el("line",{x1:xMin,y1:Yd(0),x2:xMax,y2:Yd(0),stroke:C.courtNet,"stroke-width":2.4})); // net
   // opponent figure + wing labels (drawn first so dots sit on top)
   drawOppFigure(svg,ox,20,hand,recv);
   const fhX=hand==="R"?X(SGL*0.62):X(-SGL*0.62),bhX=hand==="R"?X(-SGL*0.62):X(SGL*0.62);
@@ -980,8 +1012,8 @@ function drawTargetMap(){
   box.appendChild(svg);
 }
 function drawOppFigure(svg,cx,cy,hand,recv){
-  const s="rgba(220,235,255,.7)";
-  svg.appendChild(el("circle",{cx,cy,r:6,fill:"rgba(220,235,255,.14)",stroke:s,"stroke-width":1.5})); // head
+  const s=C.courtNet;
+  svg.appendChild(el("circle",{cx,cy,r:6,fill:"none",stroke:s,"stroke-width":1.5})); // head
   svg.appendChild(el("line",{x1:cx,y1:cy+6,x2:cx,y2:cy+18,stroke:s,"stroke-width":1.5}));               // spine
   svg.appendChild(el("path",{d:`M ${cx-9} ${cy+20} Q ${cx} ${cy+9} ${cx+9} ${cy+20}`,fill:"none",stroke:s,"stroke-width":1.5})); // shoulders
   // racket arm on the opponent's forehand side (their right = your left when RH, so x = cx- for RH)
@@ -1144,8 +1176,8 @@ function render3D(){
   const ctx=c3ctx;if(!ctx)return;const w=c3canvas.width/devicePixelRatio,h=580;ctx.clearRect(0,0,w,h);
   const corners=[[-DBL,0],[DBL,0],[DBL,BASE],[-DBL,BASE]].map(([x,y])=>project(x,y,0));
   ctx.beginPath();corners.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();
-  const g=ctx.createLinearGradient(0,project(0,BASE,0).y,0,project(0,0,0).y);g.addColorStop(0,"#16324a");g.addColorStop(1,"#0f2338");ctx.fillStyle=g;ctx.fill();
-  ctx.lineWidth=1.4;ctx.strokeStyle="rgba(220,235,255,.72)";
+  const g=ctx.createLinearGradient(0,project(0,BASE,0).y,0,project(0,0,0).y);g.addColorStop(0,C.courtTop);g.addColorStop(1,C.courtBot);ctx.fillStyle=g;ctx.fill();
+  ctx.lineWidth=1.4;ctx.strokeStyle=C.courtLine;
   const L=(a,b)=>{const p=project(a[0],a[1],a[2]||0),q=project(b[0],b[1],b[2]||0);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();};
   L([-DBL,0],[DBL,0]);L([-DBL,BASE],[DBL,BASE]);L([-DBL,0],[-DBL,BASE]);L([DBL,0],[DBL,BASE]);L([-SGL,0],[-SGL,BASE]);L([SGL,0],[SGL,BASE]);L([-SGL,NET-6.4],[SGL,NET-6.4]);L([-SGL,NET+6.4],[SGL,NET+6.4]);L([0,NET-6.4],[0,NET+6.4]);
   drawNet(ctx);
@@ -1156,7 +1188,7 @@ function render3D(){
   for(const a of arcs){const bp=a.pts[a.pts.length-1],isRally=a.t.outcome==="rally",df=0.5+0.5*near(a),term=a.t.outcome==="winner"||a.t.outcome==="error";if(isRally&&dimRally){ctx.globalAlpha=0.16*df;ctx.beginPath();ctx.arc(bp.x,bp.y,1.3,0,7);ctx.fillStyle=a.color;ctx.fill();continue;}ctx.globalAlpha=(isRally?0.5:0.95)*df;ctx.beginPath();ctx.arc(bp.x,bp.y,isRally?1.7:2.8,0,7);ctx.fillStyle=a.color;ctx.fill();if(term){ctx.globalAlpha=0.9*df;ctx.lineWidth=1;ctx.strokeStyle="rgba(255,255,255,.6)";ctx.stroke();}}
   ctx.globalAlpha=1;document.getElementById("c3-hud").innerHTML=`${arcs.length} trajectories<br>yaw ${(cam.yaw%6.283).toFixed(2)} · pitch ${cam.pitch.toFixed(2)}`;
 }
-function drawNet(ctx){const p1=project(-DBL,NET,0),p1t=project(-DBL,NET,1.07),p2=project(DBL,NET,0),p2t=project(DBL,NET,1.07);ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p1t.x,p1t.y);ctx.lineTo(p2t.x,p2t.y);ctx.lineTo(p2.x,p2.y);ctx.closePath();ctx.fillStyle="rgba(200,220,240,.09)";ctx.fill();ctx.strokeStyle="rgba(200,220,240,.28)";ctx.lineWidth=.6;for(let i=0;i<=20;i++){const x=-DBL+DBL*2*i/20,b=project(x,NET,0),tp=project(x,NET,1.07);ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(tp.x,tp.y);ctx.stroke();}ctx.strokeStyle="rgba(255,255,255,.75)";ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(p1t.x,p1t.y);ctx.lineTo(p2t.x,p2t.y);ctx.stroke();}
+function drawNet(ctx){const p1=project(-DBL,NET,0),p1t=project(-DBL,NET,1.07),p2=project(DBL,NET,0),p2t=project(DBL,NET,1.07);ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p1t.x,p1t.y);ctx.lineTo(p2t.x,p2t.y);ctx.lineTo(p2.x,p2.y);ctx.closePath();ctx.fillStyle=C.courtNetMesh;ctx.fill();ctx.strokeStyle=C.courtNetMesh;ctx.lineWidth=.6;for(let i=0;i<=20;i++){const x=-DBL+DBL*2*i/20,b=project(x,NET,0),tp=project(x,NET,1.07);ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(tp.x,tp.y);ctx.stroke();}ctx.strokeStyle=C.courtNet;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(p1t.x,p1t.y);ctx.lineTo(p2t.x,p2t.y);ctx.stroke();}
 function renderReplay(ctx){
   const shots=byPoint[currentPid()];
   shots.forEach((t,i)=>{const a=buildArcPts(t);ctx.beginPath();a.pts.forEach((p,k)=>k?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.lineCap="round";ctx.strokeStyle=colOf(t.player);ctx.globalAlpha=i<replay.shot?0.5:i===replay.shot?0.9:0.12;ctx.lineWidth=i===replay.shot?2.4:1.4;ctx.stroke();if(i<=replay.shot){const bp=a.pts[a.pts.length-1];ctx.globalAlpha=0.85;ctx.beginPath();ctx.arc(bp.x,bp.y,2.4,0,7);ctx.fillStyle=ctx.strokeStyle;ctx.fill();}});

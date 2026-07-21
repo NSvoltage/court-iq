@@ -300,10 +300,10 @@ canvas{display:block;width:100%;touch-action:none}
       <div class="ctl">
         <label>Hitter</label><div class="seg" id="tg-player"></div>
         <label id="tg-hand-lbl">Their hand</label><div class="seg" id="tg-hand"></div>
-        <label>Map</label><div class="seg" id="tg-map-mode"><button data-x="zones" class="on">Zones</button><button data-x="winner">Winners</button><button data-x="error">Errors</button></div>
+        <label>Map</label><div class="seg" id="tg-map-mode"><button data-x="zones" class="on">Zones</button><button data-x="inout">In / out</button><button data-x="winner">Winners</button><button data-x="error">Errors</button></div>
       </div>
       <div class="grid g2" style="margin-bottom:16px">
-        <div class="card"><h3 id="tg-map-title">Placement map</h3><p class="hint">Where groundstrokes land in the opponent's court. <b>Winners</b> plot where they landed in; <b>Errors</b> are placed by how they missed — into the net (at the net), long (past the baseline), or wide (past the sideline).</p><div id="tg-map"></div></div>
+        <div class="card"><h3 id="tg-map-title">Placement map</h3><p class="hint">Where groundstrokes land in the opponent's court. <b>In / out</b> plots every groundstroke by what happened to it — landed in, long, wide or into the net — so you can see exactly which balls stayed in.</p><div id="tg-map"></div></div>
         <div class="card"><h3 id="tg-break-title">Shot selection by wing</h3><p class="hint">From each of the hitter's own wings, where the ball goes — so you can see, say, whether the forehand prefers down-the-line or inside-out.</p><div id="tg-break"></div></div>
       </div>
       <div class="card"><h3>How the targeting shifted over the match</h3><p class="hint">The match split into three equal stretches, oldest to newest — the mix of balls sent to the opponent's backhand, middle, and forehand side.</p><div id="tg-shift"></div><div class="insight" id="tg-insight"></div></div>
@@ -334,7 +334,7 @@ canvas{display:block;width:100%;touch-action:none}
       <span class="conf high"><span class="dot"></span> Directly measured (per shot)</span>
       <div class="grid g4" id="rel-tiles" style="margin-bottom:16px"></div>
       <div class="grid g2"><div class="card"><h3>In-play rate by stroke</h3><p class="hint">Share of each stroke that landed in.</p><div id="rel-stroke"></div></div><div class="card"><h3>When you miss — net vs long</h3><p class="hint">Long = over-hitting; net = low trajectory.</p><div id="rel-miss"></div></div></div>
-      <div class="card" style="margin-top:16px"><h3>Miss rate by direction</h3><p class="hint">Which targets cost you most.</p><div id="rel-dir"></div></div>
+      <div class="card" style="margin-top:16px"><h3>Miss rate by direction</h3><p class="hint">Which targets cost you most. <b>Straight</b> vs <b>diagonal</b> is the ball's path; <b>inside</b> means you stepped around to hit it on the other wing — so "down the line" and "inside in" both fly straight but are struck from different places.</p><div id="rel-dir"></div></div>
       <div class="insight" id="rel-insight"></div><p class="method" id="rel-method"></p>
     </section>
 
@@ -398,6 +398,23 @@ function applyTheme(mode){
 }
 const SPINC={Topspin:"#3987e5",Slice:"#22c55e",Kick:"#f5b301",Flat:"#e07a3c"};
 const TGC={bh:"#a78bfa",fh:"#2dd4bf",mid:"#5b6b82"};
+/* Direction names collide unless you say WHERE the ball was struck from:
+   "down the line" and "inside in" both fly straight — the difference is that
+   inside-in was hit after stepping around to the other wing. Same for
+   cross-court vs inside-out (both diagonal). */
+const DIRINFO={
+  "cross court":{g:"natural",p:"diagonal"},
+  "down the line":{g:"natural",p:"straight"},
+  "down the middle":{g:"natural",p:"middle"},
+  "inside out":{g:"runaround",p:"diagonal"},
+  "inside in":{g:"runaround",p:"straight"},
+  "out wide":{g:"serve",p:"wide"},
+  "down the T":{g:"serve",p:"down the T"}
+};
+const dirGroup=d=>(DIRINFO[d]||{}).g||"other";
+const dirPath=d=>(DIRINFO[d]||{}).p||"";
+const dirLabel=d=>dirPath(d)?d+" · "+dirPath(d):d;
+const GRPLABEL={natural:"Struck from the natural wing",runaround:"Run-around — stepped across to the other wing",serve:"Serve",other:"Other"};
 const otherK=k=>k==="you"?"opp":"you";
 // quiet footnote marker for figures the integrity pass had to reconstruct
 const AST=fam=>(M&&M.integrity&&M.integrity.verification.annotate.indexOf(fam)>=0)
@@ -896,9 +913,9 @@ function drawRelMiss(){
 }
 function drawRelDir(){
   const box=clear("rel-dir"),d=M.player.reliability.you.by_direction;const rows=Object.entries(d).filter(([k,v])=>v.n>=4).sort((a,b)=>b[1].miss_pct-a[1].miss_pct);
-  const W=900,rh=30,H=rows.length*rh+10,P={l:110,r:44},iw=W-P.l-P.r,mx=Math.max(...rows.map(r=>r[1].miss_pct),20);
+  const W=900,rh=30,H=rows.length*rh+10,P={l:170,r:44},iw=W-P.l-P.r,mx=Math.max(...rows.map(r=>r[1].miss_pct),20);
   const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:H});
-  rows.forEach(([dir,v],i)=>{const y=i*rh+6;svg.appendChild(T(0,y+16,dir,{fill:C.ink2,"font-size":12}));const bw=iw*v.miss_pct/mx,col=v.miss_pct>=20?C.bad:v.miss_pct>=12?C.warn:C.good;svg.appendChild(el("rect",{x:P.l,y:y+4,width:Math.max(3,bw),height:16,rx:4,fill:col,opacity:.85}));svg.appendChild(T(P.l+Math.max(3,bw)+6,y+16,v.miss_pct+"% ("+v.n+")",{fill:col,"font-size":11,"font-weight":700}));});
+  rows.forEach(([dir,v],i)=>{const y=i*rh+6;svg.appendChild(T(0,y+16,dirLabel(dir),{fill:C.ink2,"font-size":12}));const bw=iw*v.miss_pct/mx,col=v.miss_pct>=20?C.bad:v.miss_pct>=12?C.warn:C.good;svg.appendChild(el("rect",{x:P.l,y:y+4,width:Math.max(3,bw),height:16,rx:4,fill:col,opacity:.85}));svg.appendChild(T(P.l+Math.max(3,bw)+6,y+16,v.miss_pct+"% ("+v.n+")",{fill:col,"font-size":11,"font-weight":700}));});
   box.appendChild(svg);
 }
 
@@ -993,20 +1010,33 @@ function drawTargetMap(){
   // so we show net errors at the net, long balls past the baseline, wide balls past the sideline.
   let bottomCap=`top = ${disp(recv)}'s baseline (deep) · bottom = net (you hit from below)`;
   if(!zones){
-    const isErr=tgState.map==="error",cc=isErr?C.bad:C.good;
-    const dots=M.trajectories.filter(t=>t.player===tgState.player&&(t.stroke==="Forehand"||t.stroke==="Backhand")&&t.outcome===tgState.map&&typeof t.bx==="number"&&typeof t.by==="number");
-    let nNet=0,nLong=0,nWide=0,nIn=0;
-    dots.forEach(t=>{
+    const mode=tgState.map; // "inout" | "winner" | "error"
+    // one rule for every ball: place it by what MEASURABLY happened to it
+    const place=t=>{
       const far=t.by>NET,rx=far?-t.bx:t.bx,deep=(far?(t.by-NET):(NET-t.by))/(BASE-NET),lat=Math.abs(t.bx);
-      let cx,cy,why;
-      if(isErr&&t.result==="Net"){nNet++;why="into the net";cx=clip(X(rx),xMin+6,xMax-6);cy=Yd(0)+9;}
-      else if(isErr&&deep>1.0){nLong++;why="long — past the baseline";cx=clip(X(rx),xMin+6,xMax-6);cy=oyTop-9;}
-      else if(isErr&&lat>SGL){nWide++;why="wide — past the sideline";cx=(X(rx)<ox?xMin-9:xMax+9);cy=clip(Yd(clip(deep,0,1)),oyTop+8,oyTop+cH-8);}
-      else{nIn++;why=isErr?"landed in the court":"winner";cx=clip(X(rx),xMin+4,xMax-4);cy=clip(Yd(clip(deep,0,1)),oyTop+4,oyTop+cH-4);}
-      const c=el("circle",{cx,cy,r:3.8,fill:cc,"fill-opacity":.6,stroke:cc,"stroke-width":1});c.style.cursor="pointer";
-      c.addEventListener("mousemove",e=>tip(`<b>${disp(t.player)} ${t.stroke}${isErr?" error":""}</b><br><span class="mut">${isErr?why+" · ":""}${t.dir} · ${t.spd}mph</span>`,e.clientX,e.clientY));c.addEventListener("mouseleave",untip);svg.appendChild(c);
+      if(t.result==="Net")return{cx:clip(X(rx),xMin+6,xMax-6),cy:Yd(0)+9,k:"net",why:"into the net"};
+      if(t.result==="Out"){
+        if(deep>1.0)return{cx:clip(X(rx),xMin+6,xMax-6),cy:oyTop-9,k:"long",why:"long — past the baseline"};
+        if(lat>SGL)return{cx:(X(rx)<ox?xMin-9:xMax+9),cy:clip(Yd(clip(deep,0,1)),oyTop+8,oyTop+cH-8),k:"wide",why:"wide — past the sideline"};
+        return{cx:clip(X(rx),xMin+4,xMax-4),cy:clip(Yd(clip(deep,0,1)),oyTop+4,oyTop+cH-4),k:"out",why:"out"};
+      }
+      return{cx:clip(X(rx),xMin+4,xMax-4),cy:clip(Yd(clip(deep,0,1)),oyTop+4,oyTop+cH-4),k:"in",why:"landed in"};
+    };
+    const isGS=t=>t.player===tgState.player&&(t.stroke==="Forehand"||t.stroke==="Backhand")&&typeof t.bx==="number"&&typeof t.by==="number";
+    const dots=M.trajectories.filter(mode==="inout"?isGS:(t=>isGS(t)&&t.outcome===mode));
+    const shotCol=t=>mode==="inout"?(t.result==="In"?C.good:t.result==="Net"?C.warn:C.bad):(mode==="winner"?C.good:C.bad);
+    const tally={in:0,net:0,long:0,wide:0,out:0};
+    dots.forEach(t=>{
+      const pos=place(t),cc=shotCol(t);tally[pos.k]++;
+      const c=el("circle",{cx:pos.cx,cy:pos.cy,r:mode==="inout"?3:3.8,fill:cc,"fill-opacity":mode==="inout"?.5:.62,stroke:cc,"stroke-width":mode==="inout"?.8:1});
+      c.style.cursor="pointer";
+      c.addEventListener("mousemove",e=>tip(`<b>${disp(t.player)} ${t.stroke}</b><br><span class="mut">${pos.why} · ${t.dir} · ${t.spd} mph</span>`,e.clientX,e.clientY));
+      c.addEventListener("mouseleave",untip);svg.appendChild(c);
     });
-    bottomCap=isErr?`${nNet} into the net (shown at net) · ${nLong} long · ${nWide} wide${nIn?` · ${nIn} in-court`:""}`:`${dots.length} winners — where they landed`;
+    bottomCap=mode==="inout"
+      ? `${tally.in} landed in · ${tally.long} long · ${tally.wide+tally.out} wide · ${tally.net} net — every groundstroke`
+      : mode==="winner" ? `${dots.length} winners — where they landed`
+      : `${tally.net} into the net · ${tally.long} long · ${tally.wide+tally.out} wide`;
   }
   svg.appendChild(T(ox,H-9,bottomCap,{"text-anchor":"middle",fill:C.muted,"font-size":10}));
   box.appendChild(svg);
@@ -1024,7 +1054,7 @@ function drawOppFigure(svg,cx,cy,hand,recv){
 }
 function drawTargetBreakdown(){
   const box=clear("tg-break"),tg=M.targeting[tgState.player],recv=otherK(tgState.player),hand=tgState.hand[recv],col=colOf(tgState.player);
-  const W=box.clientWidth||460,lx=116,bw=W-lx-94,you=disp(tgState.player);
+  const W=box.clientWidth||460,lx=152,bw=W-lx-78,you=disp(tgState.player);
   const sub=(t)=>mk("div",null,`<div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin:6px 0 6px">${t}</div>`);
   const barChart=(rows,h)=>{const H=rows.length*h+6,svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:H}),mx=Math.max(...rows.map(r=>r[1]),1);
     rows.forEach((r,i)=>{const y=i*h+4;svg.appendChild(T(0,y+h/2+4,r[0],{fill:C.ink2,"font-size":12}));svg.appendChild(el("rect",{x:lx,y:y+3,width:Math.max(3,bw*r[1]/mx),height:h-8,rx:4,fill:r[2],opacity:.9}));svg.appendChild(T(lx+bw*r[1]/mx+6,y+h/2+4,r[1]+"%"+(r[3]!=null?` (${r[3]})`:""),{fill:r[2],"font-size":11,"font-weight":700}));});return svg;};
@@ -1032,7 +1062,12 @@ function drawTargetBreakdown(){
   [["Forehand",tend.Forehand],["Backhand",tend.Backhand]].forEach(([stroke,rows])=>{
     box.appendChild(sub(`${you}'s ${stroke.toLowerCase()} — where it goes`));
     if(!rows||!rows.length){box.appendChild(mk("p","hint",`No ${stroke.toLowerCase()} data.`));return;}
-    box.appendChild(barChart(rows.slice(0,5).map(r=>[r.dir,r.pct,col,r.n]),27));
+    const groups={};rows.forEach(r=>{(groups[dirGroup(r.dir)]=groups[dirGroup(r.dir)]||[]).push(r);});
+    ["natural","runaround","serve","other"].forEach(g=>{
+      const rs=groups[g];if(!rs||!rs.length)return;
+      box.appendChild(mk("div",null,`<div style="font-size:10.5px;color:var(--muted);font-style:italic;margin:6px 0 2px">${GRPLABEL[g]}</div>`));
+      box.appendChild(barChart(rs.map(r=>[dirLabel(r.dir),r.pct,col,r.n]),26));
+    });
   });
   box.appendChild(sub("Depth it lands"));
   box.appendChild(barChart([["Deep",tg.depth.deep_pct,col],["Mid",tg.depth.mid_pct,col],["Short",tg.depth.short_pct,col]],26));

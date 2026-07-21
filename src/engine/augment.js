@@ -49,29 +49,18 @@
         elite_shots:gq.filter(q=>q>=70).length, weak_shots:gq.filter(q=>q<30).length, n:gq.length};
     }
 
-    // ---------- OUTCOME IMPUTATION -> reconstruction ----------
+    // ---------- REPAIR: fix outcomes distorted by dropped mid-rally tracking ----------
+    // Runs before anything that consumes point winners.
+    if(root.SVRepair) M.repair = root.SVRepair.repair(M, byPoint);
+
+    // ---------- reconstruction (score), built on the REPAIRED outcomes ----------
     const src=Counter([]); const perPoint=[];
     let recon={you:0,opp:0};
-    const trackedIds=new Set(M.points.map(p=>p.point));
     for(const p of M.points){
-      const shots=byPoint[p.point]||[];
-      const last=shots[shots.length-1];
-      let winner=p.winner, source, conf;
-      if(p.reason==="error"){source="measured";conf=1.0;}
-      else{ // last shot 'In'
-        const trunc=dur[p.point]&&p.n_shots&&(dur[p.point]/p.n_shots>1.9);
-        const Q=last?last.q:null;
-        if(trunc){
-          source="imputed";
-          const youQ=mean(shots.filter(s=>s.player==="you"&&s.q!=null).map(s=>s.q));
-          const oppQ=mean(shots.filter(s=>s.player==="opp"&&s.q!=null).map(s=>s.q));
-          winner=youQ>=oppQ?"you":"opp";
-          conf=rnd(0.5+clamp(Math.abs(youQ-oppQ)/80,0,0.35),2);
-        } else {
-          source=(Q!=null&&Q>=55)?"winner_clear":"winner_soft";
-          conf=(Q!=null&&Q>=55)?0.9:0.7; // hitter credited
-        }
-      }
+      const winner=p.winner;
+      const source = p.outcome_class==="error" ? "measured"
+        : p.outcome_class==="winner" ? "winner_clear" : "imputed";
+      const conf = p.outcome_conf!=null ? p.outcome_conf : 0.5;
       recon[winner]++; src[source]=(src[source]||0)+1;
       perPoint.push({pt:p.point,winner,source,conf});
     }
@@ -222,10 +211,15 @@
 
     if(!gameStructured) flags.push({level:"warn",code:"no_game_structure",
       msg:`This export doesn't encode game structure — serves come in turns of up to ${longest} points, not 4–7-point games (rally-mode doesn't store games, and warm-up/rally segments can be mixed in). Holds, breaks, games, sets, tiebreaks and a clean 1st/2nd-serve split can't be reconstructed from it. Attach the final score to unlock them.`});
-    if(outcomeBiased) flags.push({level:"warn",code:"outcome_truncation",
-      msg:`Rally tracking is incomplete: ${ambigPct}% of points end on an ambiguous "in" ball and the returner hits the last tracked shot ${retLastPct}% of the time. That biases who gets credited the point, so winner counts, the score and service-points-won are low-confidence. Errors (a ball hit out/into the net) and everything measured per shot stay trustworthy.`});
-    if(bothBelow50) flags.push({level:"info",code:"serve_below_50",
-      msg:`Both players "win" under half their service points (${svcY}% / ${svcO}%) — a symptom of the truncation bias above, not real serve-holds.`});
+    const rep=M.repair;
+    if(rep){ // outcomes were repaired — report the residual uncertainty, not the raw defect
+      const imp=rep.endings.truncated_imputed;
+      flags.push({level:"info",code:"outcomes_repaired",
+        msg:`${ambigPct}% of points ended on an ambiguous "in" ball (tracking dropped mid-rally, returner-last ${retLastPct}% of the time). ${imp} of them were re-imputed from the measured-only base rate instead of crediting the last tracked shot — which removed ${rep.winners_changed} wrong point winners and cut phantom winners. Treat the score as ±${imp} points; winners/errors now count only endings we can defend.`});
+    } else if(outcomeBiased) flags.push({level:"warn",code:"outcome_truncation",
+      msg:`Rally tracking is incomplete: ${ambigPct}% of points end on an ambiguous "in" ball and the returner hits the last tracked shot ${retLastPct}% of the time. That biases who gets credited the point, so winner counts, the score and service-points-won are low-confidence.`});
+    if(bothBelow50) flags.push({level:"warn",code:"serve_below_50",
+      msg:`Both players "win" under half their service points (${svcY}% / ${svcO}%) — servers cannot both lose the majority of their service points.`});
     if(breaksImplied) flags.push({level:"info",code:"breaks_implied",
       msg:`Returners win over half their return points, so in match play serve was broken repeatedly and break points certainly occurred — we just can't locate them without a game structure.`});
     if(dfHigh) flags.push({level:"info",code:"df_inflated",
@@ -233,20 +227,24 @@
 
     // Confidence per stat family. Measured-per-shot layer is trustworthy; inferred
     // outcome/serve/game layer is not, for this export.
+    // After repair the outcome layer is usable (approximate, not wrong). Without it,
+    // outcome stats stay gated.
+    const repaired=!!rep;
     const reliable = {
       measured_shots:true,        // per-shot in/out/net, contact, placement
       placement:true, shot_speed:true, movement:true, shot_quality:true,
       errors:true,                // net/out endings are definitive
       serve_in_rate:true,         // did the logged serve land in
-      point_outcomes:!outcomeBiased,
-      winners:!outcomeBiased,     // "in" endings inflate winners when rallies truncate
-      score:!outcomeBiased,
-      service_stats:gameStructured&&!bothBelow50&&!outcomeBiased,
+      point_outcomes:repaired||!outcomeBiased,
+      winners:repaired||!outcomeBiased,
+      score:repaired||!outcomeBiased,       // approximate — see score_uncertainty
+      service_stats:(repaired||!outcomeBiased)&&!bothBelow50,
       first_second_serve:false, double_faults:!dfHigh,
       break_points:false, games_sets:false, tiebreaks:false
     };
     const level = flags.some(f=>f.level==="warn") ? "caution" : "ok";
     return { level, game_structure_recoverable:gameStructured, outcome_biased:outcomeBiased,
+      outcomes_repaired:repaired, score_uncertainty:rep?rep.endings.truncated_imputed:null,
       ambiguous_end_pct:ambigPct, returner_last_shot_pct:retLastPct,
       serve_runs:runs.length, avg_serve_run:rnd(avgRun,1), longest_serve_run:longest,
       both_serve_below_50:bothBelow50, breaks_implied:breaksImplied,

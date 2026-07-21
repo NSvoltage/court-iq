@@ -6,6 +6,7 @@ const path = require('path');
 
 // The engine modules attach to globalThis (they run in the browser too).
 require('../src/engine/base.js');
+require('../src/engine/repair.js');
 require('../src/engine/augment.js');
 
 const sample = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'src', 'data', 'sample-match.json'), 'utf8'));

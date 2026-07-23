@@ -30,7 +30,9 @@ Each engine module is a plain IIFE that attaches to `window` (or `globalThis` in
 Node), which is why the same files run both in the browser and in the tests.
 They load in dependency order — `fflate` → `xlsxlite` → `base` → `integrity` →
 `augment` → `career` — set in `scripts/build.js`. See
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the boundaries, and
+[`AGENTS.md`](AGENTS.md) for a one-page operational summary (build, invariants,
+gotchas) that a coding agent or a new contributor can start from.
 
 ## Conventions
 
